@@ -184,16 +184,6 @@ See `src/services/api.ts` for details.
 
 ---
 
-## 🤝 Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes (TypeScript preferred)
-4. Add/extend types as needed
-5. Test thoroughly
-6. Submit a pull request
-
----
-
 ## 🆘 Support & Documentation
 - See this README and code comments
 - Review `src/types/` for data models
