@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Target, Award, BarChart3, TrendingUp, Users, Clock, Star } from 'lucide-react';
+import { Target, Award, BarChart3, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -106,19 +105,6 @@ const Dashboard: React.FC = () => {
       color: 'bg-purple-500'
     }
   ];
-
-  const getActivityIcon = (type: Activity['type']) => {
-    switch (type) {
-      case 'badge':
-        return <Award className="w-5 h-5 text-ucf-gold" />;
-      case 'progress':
-        return <TrendingUp className="w-5 h-5 text-green-500" />;
-      case 'assessment':
-        return <Target className="w-5 h-5 text-blue-500" />;
-      default:
-        return <Star className="w-5 h-5 text-gray-500" />;
-    }
-  };
 
   if (loading) {
     return (
