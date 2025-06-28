@@ -225,13 +225,19 @@ const Signup: React.FC = () => {
         <div className="text-center text-sm text-gray-600">
           <p>
             By creating an account, you agree to our{' '}
-            <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+            <button 
+              type="button"
+              className="font-medium text-primary-600 hover:text-primary-500"
+            >
               Terms of Service
-            </a>{' '}
+            </button>{' '}
             and{' '}
-            <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+            <button 
+              type="button"
+              className="font-medium text-primary-600 hover:text-primary-500"
+            >
               Privacy Policy
-            </a>
+            </button>
           </p>
         </div>
       </div>
