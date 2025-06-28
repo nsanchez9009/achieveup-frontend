@@ -5,6 +5,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Settings from './pages/Settings';
 import './index.css';
 import SkillMatrixCreator from './components/SkillMatrixCreator/SkillMatrixCreator';
 import SkillAssignmentInterface from './components/SkillAssignmentInterface/SkillAssignmentInterface';
@@ -35,6 +37,7 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route
         path="/dashboard"
         element={
@@ -69,6 +72,11 @@ const AppRoutes: React.FC = () => {
       <Route path="/analytics" element={
         <ProtectedRoute>
           <AnalyticsDashboard courseId="demo-course-456" />
+        </ProtectedRoute>
+      } />
+      <Route path="/settings" element={
+        <ProtectedRoute>
+          <Settings />
         </ProtectedRoute>
       } />
     </Routes>

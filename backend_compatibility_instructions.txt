@@ -6,7 +6,7 @@ This document provides detailed instructions for the backend AI to ensure full c
 CURRENT FRONTEND STATUS:
 - ✅ TypeScript implementation complete
 - ✅ UCF branding and color scheme implemented
-- ✅ Authentication system with Canvas integration
+- ✅ Email/password authentication system with Canvas API token integration
 - ✅ All components converted to use real API calls (no mock data)
 - ✅ Production-ready build configuration
 - ✅ Responsive design and accessibility features
@@ -17,6 +17,12 @@ REQUIRED BACKEND ENDPOINTS & IMPLEMENTATION:
 
 1. AUTHENTICATION ENDPOINTS
 ---------------------------
+POST /auth/signup
+- Purpose: User registration with email/password and optional Canvas API token
+- Request: { name: string, email: string, password: string, canvasApiToken?: string }
+- Response: { token: string, user: User }
+- Status: NEEDS IMPLEMENTATION
+
 POST /auth/login
 - Purpose: User login with email/password
 - Request: { email: string, password: string }
@@ -35,22 +41,38 @@ GET /auth/me
 - Response: { user: User }
 - Status: NEEDS IMPLEMENTATION
 
+PUT /auth/profile
+- Purpose: Update user profile information including Canvas API token
+- Headers: Authorization: Bearer <token>
+- Request: { name: string, email: string, canvasApiToken?: string }
+- Response: { user: User }
+- Status: NEEDS IMPLEMENTATION
+
+PUT /auth/password
+- Purpose: Change user password
+- Headers: Authorization: Bearer <token>
+- Request: { currentPassword: string, newPassword: string }
+- Response: void
+- Status: NEEDS IMPLEMENTATION
+
 2. CANVAS INTEGRATION ENDPOINTS
 -------------------------------
+Note: These endpoints must use the user's stored Canvas API token from their profile to make authenticated requests to the Canvas API. The token is never sent to the frontend after initial entry.
+
 GET /canvas/courses
-- Purpose: Get user's Canvas courses
+- Purpose: Get user's Canvas courses using their stored API token
 - Headers: Authorization: Bearer <token>
 - Response: CanvasCourse[]
 - Status: NEEDS IMPLEMENTATION
 
 GET /canvas/courses/{courseId}/quizzes
-- Purpose: Get quizzes for a specific course
+- Purpose: Get quizzes for a specific course using user's Canvas API token
 - Headers: Authorization: Bearer <token>
 - Response: CanvasQuiz[]
 - Status: NEEDS IMPLEMENTATION
 
 GET /canvas/quizzes/{quizId}/questions
-- Purpose: Get questions for a specific quiz
+- Purpose: Get questions for a specific quiz using user's Canvas API token
 - Headers: Authorization: Bearer <token>
 - Response: CanvasQuestion[]
 - Status: NEEDS IMPLEMENTATION
@@ -63,63 +85,69 @@ POST /achieveup/matrix/create
 - Response: SkillMatrix
 - Status: NEEDS IMPLEMENTATION
 
-GET /achieveup/matrix/{matrixId}
-- Purpose: Get specific skill matrix
-- Response: SkillMatrix
-- Status: NEEDS IMPLEMENTATION
-
 PUT /achieveup/matrix/{matrixId}
 - Purpose: Update skill matrix
 - Request: { skills: string[] }
 - Response: SkillMatrix
 - Status: NEEDS IMPLEMENTATION
 
-POST /achieveup/skills/assign
+GET /achieveup/matrix/{courseId}
+- Purpose: Get skill matrix for a course
+- Response: SkillMatrix
+- Status: NEEDS IMPLEMENTATION
+
+POST /achieveup/assign-skills
 - Purpose: Assign skills to quiz questions
-- Request: { course_id: string, question_skills: { [questionId]: string[] } }
+- Request: { course_id: string, question_skills: { [questionId: string]: string[] } }
 - Response: void
 - Status: NEEDS IMPLEMENTATION
 
-POST /achieveup/skills/suggest
-- Purpose: Get AI-powered skill suggestions
+POST /achieveup/suggest-skills
+- Purpose: Suggest skills for a quiz question
 - Request: { question_text: string, course_context?: string }
 - Response: string[]
 - Status: NEEDS IMPLEMENTATION
 
+4. BADGE MANAGEMENT ENDPOINTS
+-----------------------------
 POST /achieveup/badges/generate
-- Purpose: Generate badges for student achievements
-- Request: { student_id: string, course_id: string, skill_levels: { [skillName]: string } }
+- Purpose: Generate badges for a student
+- Request: { student_id: string, course_id: string, skill_levels: { [skillName: string]: 'beginner' | 'intermediate' | 'advanced' } }
 - Response: Badge[]
 - Status: NEEDS IMPLEMENTATION
 
 GET /achieveup/badges/{studentId}
-- Purpose: Get all badges for a student
+- Purpose: Get badges for a student
 - Response: Badge[]
 - Status: NEEDS IMPLEMENTATION
 
+5. PROGRESS TRACKING ENDPOINTS
+------------------------------
 GET /achieveup/progress/{studentId}/{courseId}
-- Purpose: Get skill progress for a student
+- Purpose: Get skill progress for a student in a course
 - Response: StudentProgress
 - Status: NEEDS IMPLEMENTATION
 
-POST /achieveup/progress/update
-- Purpose: Update skill assessment for a student
-- Request: { student_id: string, course_id: string, skill_updates: { [skillName]: { score: number, notes?: string } } }
-- Response: void
+PUT /achieveup/progress/{studentId}/{courseId}
+- Purpose: Update skill progress for a student in a course
+- Request: { skill_updates: { [skillName: string]: { score: number, notes?: string } } }
+- Response: StudentProgress
 - Status: NEEDS IMPLEMENTATION
 
+6. ANALYTICS & EXPORT ENDPOINTS
+-------------------------------
 GET /achieveup/graphs/individual/{studentId}
-- Purpose: Generate individual skill graphs
+- Purpose: Get analytics data for a student
 - Response: GraphData
 - Status: NEEDS IMPLEMENTATION
 
 GET /achieveup/export/{courseId}
-- Purpose: Export all AchieveUp data for a course
+- Purpose: Export course data (CSV)
 - Response: CourseData
 - Status: NEEDS IMPLEMENTATION
 
 POST /achieveup/import
-- Purpose: Import AchieveUp data for a course
+- Purpose: Import course data
 - Request: { course_id: string, data: CourseData }
 - Response: void
 - Status: NEEDS IMPLEMENTATION
@@ -132,7 +160,8 @@ User:
   id: string,
   name: string,
   email: string,
-  role: 'student' | 'instructor' | 'admin'
+  role: 'student' | 'instructor' | 'admin',
+  canvasApiToken?: string // Store securely, never send to frontend after entry
 }
 
 SkillMatrix:
@@ -198,7 +227,11 @@ GraphData:
   timeSeriesData?: Array<{
     date: string,
     [skillName: string]: number | string
-  }>
+  }>,
+  performance?: PerformanceData[],
+  distribution?: SkillDistributionData[],
+  trends?: TrendData[],
+  radar?: RadarData[]
 }
 
 CourseData:
@@ -210,22 +243,23 @@ CourseData:
 
 AUTHENTICATION REQUIREMENTS:
 ===========================
-1. JWT token-based authentication
-2. Token refresh mechanism
+1. JWT token-based authentication for all protected endpoints
+2. Token refresh mechanism (optional, but recommended)
 3. Role-based access control (student/instructor/admin)
-4. Canvas OAuth integration for SSO
-5. Secure password hashing
-6. Session management
+4. Secure password hashing (bcrypt or Argon2 recommended)
+5. Session management (stateless JWT preferred)
+6. Canvas API token must be stored securely and never sent to frontend after initial entry
 
 SECURITY REQUIREMENTS:
 ======================
-1. Input validation and sanitization
+1. Input validation and sanitization for all endpoints
 2. CORS configuration for frontend domain
 3. Rate limiting on API endpoints
 4. HTTPS enforcement
 5. Secure headers (HSTS, CSP, etc.)
-6. SQL injection prevention
+6. SQL injection prevention (if using SQL DB)
 7. XSS protection
+8. Never log or expose Canvas API tokens in logs or error messages
 
 ERROR HANDLING:
 ===============
@@ -236,8 +270,9 @@ ERROR HANDLING:
      statusCode: number
    }
 2. Proper HTTP status codes
-3. Detailed error logging
+3. Detailed error logging (never log Canvas API tokens)
 4. User-friendly error messages
+5. If Canvas API token is missing or invalid, return a clear error so the frontend can prompt the user to update their token
 
 PERFORMANCE REQUIREMENTS:
 =========================
@@ -267,7 +302,7 @@ INTEGRATION WITH EXISTING KNOWGAP FEATURES:
 ===========================================
 1. Ensure AchieveUp endpoints don't conflict with existing KnowGap endpoints
 2. Share authentication system with KnowGap
-3. Integrate with existing Canvas data
+3. Integrate with existing Canvas data using stored Canvas API tokens
 4. Maintain consistent API response formats
 5. Share database connections where appropriate
 
@@ -292,11 +327,15 @@ ENVIRONMENT VARIABLES NEEDED:
 =============================
 - DATABASE_URL: MongoDB connection string
 - JWT_SECRET: Secret for JWT token signing
-- CANVAS_API_URL: Canvas API base URL
-- CANVAS_CLIENT_ID: Canvas OAuth client ID
-- CANVAS_CLIENT_SECRET: Canvas OAuth client secret
 - CORS_ORIGIN: Frontend domain for CORS
-- NODE_ENV: Environment (development/production)
+- CANVAS_API_URL: Canvas API base URL
+
+NOTES:
+======
+- Canvas API token is the only method for Canvas integration. OAuth/SSO is not required or supported in this version.
+- All Canvas API requests must be made server-side using the stored token.
+- Users can update their Canvas API token at any time via the /auth/profile endpoint.
+- If the Canvas API token is missing or invalid, endpoints must return a clear error so the frontend can prompt the user to update their token.
 
 MONITORING & LOGGING:
 =====================

@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
-import api from '../services/api';
+import { User, SignupRequest } from '../types';
+import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
+  signup: (data: SignupRequest) => Promise<boolean>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
@@ -39,7 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = localStorage.getItem('authToken');
       if (token) {
         // Verify token with backend
-        const response = await api.get('/auth/verify');
+        const response = await authAPI.verify();
         setUser(response.data.user);
       }
     } catch (error) {
@@ -53,7 +54,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
-      const response = await api.post('/auth/login', { email, password });
+      const response = await authAPI.login({ email, password });
       const { token, user } = response.data;
       
       localStorage.setItem('authToken', token);
@@ -70,6 +71,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const signup = async (data: SignupRequest): Promise<boolean> => {
+    try {
+      setLoading(true);
+      const response = await authAPI.signup(data);
+      const { token, user } = response.data;
+      
+      localStorage.setItem('authToken', token);
+      setUser(user);
+      
+      toast.success('Account created successfully!');
+      return true;
+    } catch (error: any) {
+      console.error('Signup failed:', error);
+      toast.error(error.response?.data?.message || 'Signup failed');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('authToken');
     setUser(null);
@@ -78,7 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      const response = await api.get('/auth/me');
+      const response = await authAPI.me();
       setUser(response.data.user);
     } catch (error) {
       console.error('Failed to refresh user:', error);
@@ -90,6 +111,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     loading,
     login,
+    signup,
     logout,
     refreshUser,
     isAuthenticated: !!user,

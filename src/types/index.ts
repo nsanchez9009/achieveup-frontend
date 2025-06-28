@@ -4,6 +4,14 @@ export interface User {
   name: string;
   email: string;
   role: 'student' | 'instructor' | 'admin';
+  canvasApiToken?: string;
+}
+
+export interface SignupRequest {
+  name: string;
+  email: string;
+  password: string;
+  canvasApiToken?: string;
 }
 
 // Skill Matrix Types
@@ -155,6 +163,7 @@ export interface InputProps {
   type?: string;
   disabled?: boolean;
   required?: boolean;
+  name?: string;
 }
 
 export interface CardProps {

@@ -14,7 +14,9 @@ import {
   ImportCourseDataRequest,
   CanvasCourse,
   CanvasQuiz,
-  CanvasQuestion
+  CanvasQuestion,
+  User,
+  SignupRequest
 } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -104,6 +106,22 @@ export const canvasAPI = {
     api.get(`/canvas/courses/${courseId}/quizzes`),
   getQuestions: (quizId: string): Promise<AxiosResponse<CanvasQuestion[]>> => 
     api.get(`/canvas/quizzes/${quizId}/questions`),
+};
+
+// Authentication
+export const authAPI = {
+  login: (data: { email: string; password: string }): Promise<AxiosResponse<{ token: string; user: User }>> => 
+    api.post('/auth/login', data),
+  signup: (data: SignupRequest): Promise<AxiosResponse<{ token: string; user: User }>> => 
+    api.post('/auth/signup', data),
+  verify: (): Promise<AxiosResponse<{ user: User }>> => 
+    api.get('/auth/verify'),
+  me: (): Promise<AxiosResponse<{ user: User }>> => 
+    api.get('/auth/me'),
+  updateProfile: (data: { name: string; email: string; canvasApiToken?: string }): Promise<AxiosResponse<{ user: User }>> => 
+    api.put('/auth/profile', data),
+  changePassword: (data: { currentPassword: string; newPassword: string }): Promise<AxiosResponse<void>> => 
+    api.put('/auth/password', data),
 };
 
 export default api; 

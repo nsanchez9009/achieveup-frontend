@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -33,20 +33,6 @@ const Login: React.FC = () => {
     setLoading(false);
   };
 
-  const handleCanvasLogin = () => {
-    // Redirect to Canvas OAuth
-    const canvasUrl = process.env.REACT_APP_CANVAS_API_URL || 'https://ucf.instructure.com';
-    const redirectUri = `${window.location.origin}/auth/canvas/callback`;
-    const clientId = process.env.REACT_APP_CANVAS_CLIENT_ID;
-    
-    if (clientId) {
-      const authUrl = `${canvasUrl}/login/oauth2/auth?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}`;
-      window.location.href = authUrl;
-    } else {
-      toast.error('Canvas integration not configured');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -55,7 +41,7 @@ const Login: React.FC = () => {
             Welcome to AchieveUp
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Sign in to your UCF account
+            Sign in to your account
           </p>
         </div>
 
@@ -71,7 +57,7 @@ const Login: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your.email@ucf.edu"
+                  placeholder="your.email@example.com"
                   className="pl-10"
                   required
                 />
@@ -110,7 +96,7 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div>
               <Button
                 type="submit"
                 className="w-full"
@@ -119,24 +105,15 @@ const Login: React.FC = () => {
               >
                 Sign In
               </Button>
+            </div>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleCanvasLogin}
-              >
-                Sign in with Canvas
-              </Button>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{' '}
+                <Link to="/signup" className="font-medium text-primary-600 hover:text-primary-500">
+                  Sign up here
+                </Link>
+              </p>
             </div>
           </form>
         </Card>
