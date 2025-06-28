@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { Download, Filter, TrendingUp, Users, Target, Award, Calendar } from 'lucide-react';
+import { Download, Filter, TrendingUp, Users, Target, Award } from 'lucide-react';
 import { analyticsAPI } from '../../services/api';
 import Card from '../common/Card';
 import Button from '../common/Button';
@@ -26,11 +26,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
     radar: []
   });
 
-  useEffect(() => {
-    loadAnalyticsData();
-  }, [courseId, filters]);
-
-  const loadAnalyticsData = async (): Promise<void> => {
+  const loadAnalyticsData = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       
@@ -49,7 +45,11 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    loadAnalyticsData();
+  }, [loadAnalyticsData]);
 
   const handleFilterChange = (key: keyof AnalyticsFilters, value: string): void => {
     setFilters(prev => ({ ...prev, [key]: value }));

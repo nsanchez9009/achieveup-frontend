@@ -7,39 +7,52 @@ import Button from '../common/Button';
 import Input from '../common/Input';
 import Card from '../common/Card';
 
-const SkillMatrixCreator = () => {
-  const [skills, setSkills] = useState([]);
-  const [newSkill, setNewSkill] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [editingMatrix, setEditingMatrix] = useState(null);
+interface SkillMatrix {
+  _id: string;
+  course_id: string;
+  matrix_name: string;
+  skills: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface FormData {
+  courseId: string;
+  matrixName: string;
+}
+
+const SkillMatrixCreator: React.FC = () => {
+  const [skills, setSkills] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [editingMatrix, setEditingMatrix] = useState<SkillMatrix | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-    setValue,
-  } = useForm();
+  } = useForm<FormData>();
 
-  const addSkill = () => {
+  const addSkill = (): void => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
       setSkills([...skills, newSkill.trim()]);
       setNewSkill('');
     }
   };
 
-  const removeSkill = (index) => {
+  const removeSkill = (index: number): void => {
     setSkills(skills.filter((_, i) => i !== index));
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter') {
       e.preventDefault();
       addSkill();
     }
   };
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (data: FormData): Promise<void> => {
     if (skills.length === 0) {
       toast.error('Please add at least one skill');
       return;
@@ -70,13 +83,6 @@ const SkillMatrixCreator = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadMatrixForEditing = (matrix) => {
-    setEditingMatrix(matrix);
-    setValue('courseId', matrix.course_id);
-    setValue('matrixName', matrix.matrix_name);
-    setSkills(matrix.skills);
   };
 
   return (

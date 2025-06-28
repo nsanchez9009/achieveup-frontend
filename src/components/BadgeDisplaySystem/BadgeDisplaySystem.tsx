@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Grid, List, Search, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { badgeAPI } from '../../services/api';
@@ -26,15 +26,7 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({ studentId }) =>
     dateRange: 'all'
   });
 
-  useEffect(() => {
-    loadBadges();
-  }, [studentId]);
-
-  useEffect(() => {
-    filterBadges();
-  }, [badges, filters]);
-
-  const loadBadges = async () => {
+  const loadBadges = useCallback(async () => {
     try {
       const response = await badgeAPI.getStudentBadges(studentId);
       setBadges(response.data);
@@ -44,9 +36,9 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({ studentId }) =>
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId]);
 
-  const filterBadges = () => {
+  const filterBadges = useCallback(() => {
     let filtered = [...badges];
 
     // Search filter
@@ -88,7 +80,15 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({ studentId }) =>
     }
 
     setFilteredBadges(filtered);
-  };
+  }, [badges, filters]);
+
+  useEffect(() => {
+    loadBadges();
+  }, [loadBadges]);
+
+  useEffect(() => {
+    filterBadges();
+  }, [filterBadges]);
 
   const handleViewDetails = (badge: Badge) => {
     setSelectedBadge(badge);
