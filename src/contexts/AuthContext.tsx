@@ -1,19 +1,22 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
 interface AuthContextType {
   user: User | null;
-  login: (userData: User, token: string) => void;
-  logout: () => void;
-  updateUser: (userData: User) => void;
   loading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => void;
+  refreshUser: () => Promise<void>;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
@@ -25,48 +28,71 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('authToken');
-    const userData = localStorage.getItem('userData');
-    
-    if (token && userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
-      }
-    }
-    setLoading(false);
+    checkAuthStatus();
   }, []);
 
-  const login = (userData: User, token: string): void => {
-    setUser(userData);
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('userData', JSON.stringify(userData));
+  const checkAuthStatus = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        // Verify token with backend
+        const response = await api.get('/auth/verify');
+        setUser(response.data.user);
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('authToken');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const logout = (): void => {
-    setUser(null);
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      setLoading(true);
+      const response = await api.post('/auth/login', { email, password });
+      const { token, user } = response.data;
+      
+      localStorage.setItem('authToken', token);
+      setUser(user);
+      
+      toast.success('Login successful!');
+      return true;
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      toast.error(error.response?.data?.message || 'Login failed');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
     localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
+    setUser(null);
+    toast.success('Logged out successfully');
   };
 
-  const updateUser = (userData: User): void => {
-    setUser(userData);
-    localStorage.setItem('userData', JSON.stringify(userData));
+  const refreshUser = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      setUser(response.data.user);
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      logout();
+    }
   };
 
   const value: AuthContextType = {
     user,
+    loading,
     login,
     logout,
-    updateUser,
-    loading,
+    refreshUser,
+    isAuthenticated: !!user,
   };
 
   return (

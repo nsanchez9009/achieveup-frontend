@@ -95,6 +95,10 @@ export interface GraphData {
     date: string;
     [skillName: string]: number | string;
   }>;
+  performance?: PerformanceData[];
+  distribution?: SkillDistributionData[];
+  trends?: TrendData[];
+  radar?: RadarData[];
 }
 
 export interface CourseData {

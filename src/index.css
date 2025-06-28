@@ -2,50 +2,155 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Base styles */
 @layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
   body {
     @apply bg-gray-50 text-gray-900;
   }
+  
+  * {
+    @apply border-gray-200;
+  }
 }
 
+/* Component styles */
 @layer components {
+  /* Button variants */
   .btn-primary {
-    @apply bg-ucf-gold hover:bg-primary-600 text-ucf-black font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
   }
   
   .btn-secondary {
-    @apply bg-ucf-grey hover:bg-gray-600 text-ucf-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-secondary-500 hover:bg-secondary-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:ring-offset-2;
   }
   
-  .btn-success {
-    @apply bg-success hover:bg-green-600 text-ucf-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  .btn-outline {
+    @apply border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
   }
   
-  .btn-warning {
-    @apply bg-ucf-gold hover:bg-primary-600 text-ucf-black font-medium py-2 px-4 rounded-lg transition-colors duration-200;
-  }
-  
-  .btn-danger {
-    @apply bg-danger hover:bg-red-600 text-ucf-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
-  }
-  
+  /* Card styles */
   .card {
-    @apply bg-ucf-white rounded-lg shadow-md p-6;
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
   }
   
-  .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold focus:border-transparent;
+  .card-hover {
+    @apply hover:shadow-md transition-shadow duration-200;
   }
   
-  .badge-beginner {
+  /* Input styles */
+  .input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200;
+  }
+  
+  .input-error {
+    @apply border-red-500 focus:ring-red-500 focus:border-red-500;
+  }
+  
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-primary {
+    @apply bg-primary-100 text-primary-800;
+  }
+  
+  .badge-secondary {
+    @apply bg-secondary-100 text-secondary-800;
+  }
+  
+  .badge-success {
     @apply bg-green-100 text-green-800;
   }
   
-  .badge-intermediate {
-    @apply bg-ucf-gold bg-opacity-20 text-ucf-black;
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
   }
   
-  .badge-advanced {
+  .badge-danger {
     @apply bg-red-100 text-red-800;
+  }
+  
+  /* Progress bar */
+  .progress-bar {
+    @apply w-full bg-gray-200 rounded-full h-2;
+  }
+  
+  .progress-fill {
+    @apply bg-primary-500 h-2 rounded-full transition-all duration-300;
+  }
+  
+  /* Loading spinner */
+  .spinner {
+    @apply animate-spin rounded-full border-2 border-gray-300 border-t-primary-500;
+  }
+  
+  /* UCF specific styles */
+  .ucf-header {
+    @apply bg-ucf-black text-ucf-white;
+  }
+  
+  .ucf-accent {
+    @apply text-ucf-gold;
+  }
+  
+  .ucf-button {
+    @apply bg-ucf-gold hover:bg-yellow-500 text-ucf-black font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+}
+
+/* Utility styles */
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  }
+  
+  .backdrop-blur {
+    backdrop-filter: blur(8px);
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.6s ease-out;
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  .mobile-hidden {
+    display: none;
+  }
+}
+
+@media (min-width: 641px) {
+  .desktop-hidden {
+    display: none;
   }
 } 

@@ -6,33 +6,64 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // UCF Colors
+        'ucf-black': '#000000',
+        'ucf-gold': '#FFCA06', // RGB 255, 202, 6
+        'ucf-grey': '#6B7280',
+        'ucf-white': '#FFFFFF',
+        
+        // Primary color scheme using UCF colors
         primary: {
-          50: '#fffbf0',
-          100: '#fff7e6',
-          200: '#ffedb3',
-          300: '#ffe380',
-          400: '#ffd94d',
-          500: '#ffca06', // UCF Bright Gold
-          600: '#e6b600',
-          700: '#cc9f00',
-          800: '#b38800',
-          900: '#997100',
+          50: '#fff7e6',
+          100: '#ffe8b3',
+          200: '#ffd980',
+          300: '#ffca4d',
+          400: '#ffbb1a',
+          500: '#ffca06', // UCF Gold
+          600: '#e6b605',
+          700: '#cc9f04',
+          800: '#b38803',
+          900: '#997102',
         },
-        ucf: {
-          black: '#000000',
-          gold: '#ffca06', // Bright Gold RGB(255, 202, 6)
-          grey: '#6c757d',
-          white: '#ffffff',
+        
+        // Secondary colors
+        secondary: {
+          50: '#f9fafb',
+          100: '#f3f4f6',
+          200: '#e5e7eb',
+          300: '#d1d5db',
+          400: '#9ca3af',
+          500: '#6b7280', // UCF Grey
+          600: '#4b5563',
+          700: '#374151',
+          800: '#1f2937',
+          900: '#111827',
         },
-        success: '#28a745',
-        warning: '#ffca06', // Using UCF gold for warning
-        info: '#6c757d', // Using UCF grey for info
-        danger: '#dc3545',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       animation: {
-        'bounce-slow': 'bounce 2s infinite',
-        'pulse-slow': 'pulse 3s infinite',
-      }
+        'fade-in': 'fadeIn 0.5s ease-in-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'bounce-in': 'bounceIn 0.6s ease-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        bounceIn: {
+          '0%': { transform: 'scale(0.3)', opacity: '0' },
+          '50%': { transform: 'scale(1.05)' },
+          '70%': { transform: 'scale(0.9)' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+      },
     },
   },
   plugins: [],

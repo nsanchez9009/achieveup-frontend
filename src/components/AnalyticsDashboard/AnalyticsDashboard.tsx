@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { Download, Filter, TrendingUp, Users, Target, Award } from 'lucide-react';
+import { Download, Filter, TrendingUp, Users, Target, Award, Calendar } from 'lucide-react';
 import { analyticsAPI } from '../../services/api';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import { AnalyticsDashboardProps, AnalyticsFilters, PerformanceData, SkillDistributionData, TrendData, RadarData } from '../../types';
+import toast from 'react-hot-toast';
 
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => {
   const [filters, setFilters] = useState<AnalyticsFilters>({
@@ -12,7 +13,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
     performanceRange: 'all',
     dateRange: '30'
   });
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<{
     performance: PerformanceData[];
     distribution: SkillDistributionData[];
@@ -26,47 +27,25 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
   });
 
   useEffect(() => {
-    fetchAnalyticsData();
+    loadAnalyticsData();
   }, [courseId, filters]);
 
-  const fetchAnalyticsData = async (): Promise<void> => {
-    setLoading(true);
+  const loadAnalyticsData = async (): Promise<void> => {
     try {
-      // Mock data for demonstration
-      // In a real app, you would call the actual API
-      const mockData = {
-        performance: [
-          { studentId: 'S001', averageScore: 85, totalSkills: 12, masteredSkills: 8, needsImprovement: 2 },
-          { studentId: 'S002', averageScore: 72, totalSkills: 12, masteredSkills: 6, needsImprovement: 4 },
-          { studentId: 'S003', averageScore: 91, totalSkills: 12, masteredSkills: 10, needsImprovement: 1 },
-          { studentId: 'S004', averageScore: 68, totalSkills: 12, masteredSkills: 5, needsImprovement: 5 },
-        ],
-        distribution: [
-          { skill: 'JavaScript', count: 15, percentage: 25 },
-          { skill: 'React', count: 12, percentage: 20 },
-          { skill: 'Node.js', count: 10, percentage: 17 },
-          { skill: 'Database', count: 8, percentage: 13 },
-          { skill: 'API Design', count: 6, percentage: 10 },
-          { skill: 'Testing', count: 4, percentage: 7 },
-        ],
-        trends: [
-          { skill: 'JavaScript', week1: 70, week2: 75, week3: 80, week4: 85 },
-          { skill: 'React', week1: 60, week2: 68, week3: 75, week4: 82 },
-          { skill: 'Node.js', week1: 50, week2: 58, week3: 65, week4: 70 },
-        ],
-        radar: [
-          { subject: 'JavaScript', A: 85, fullMark: 100 },
-          { subject: 'React', A: 82, fullMark: 100 },
-          { subject: 'Node.js', A: 70, fullMark: 100 },
-          { subject: 'Database', A: 75, fullMark: 100 },
-          { subject: 'API Design', A: 68, fullMark: 100 },
-          { subject: 'Testing', A: 72, fullMark: 100 },
-        ]
-      };
+      setLoading(true);
       
-      setData(mockData);
+      // Load analytics data from API
+      const response = await analyticsAPI.getIndividualGraphs(courseId);
+      setData({
+        performance: response.data.performance || [],
+        distribution: response.data.distribution || [],
+        trends: response.data.trends || [],
+        radar: response.data.radar || [],
+      });
+      
     } catch (error) {
-      console.error('Error fetching analytics data:', error);
+      console.error('Error loading analytics data:', error);
+      toast.error('Failed to load analytics data');
     } finally {
       setLoading(false);
     }
@@ -79,16 +58,35 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
   const exportData = async (): Promise<void> => {
     try {
       const response = await analyticsAPI.exportCourseData(courseId);
-      const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+      
+      // Create and download CSV file
+      const csvContent = convertToCSV(response.data);
+      const blob = new Blob([csvContent], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `analytics-${courseId}-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `analytics-${courseId}-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
+      
+      toast.success('Data exported successfully');
     } catch (error) {
       console.error('Error exporting data:', error);
+      toast.error('Failed to export data');
     }
+  };
+
+  const convertToCSV = (data: any): string => {
+    // Simple CSV conversion - can be enhanced based on actual data structure
+    const headers = ['Metric', 'Value'];
+    const rows = [
+      ['Total Students', data.totalStudents || 0],
+      ['Average Score', data.averageScore || 0],
+      ['Total Skills', data.totalSkills || 0],
+      ['Badges Awarded', data.badgesAwarded || 0],
+    ];
+    
+    return [headers, ...rows].map(row => row.join(',')).join('\n');
   };
 
   const COLORS = ['#ffca06', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];

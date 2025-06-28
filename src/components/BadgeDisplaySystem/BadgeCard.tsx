@@ -7,7 +7,7 @@ const BadgeCard: React.FC<BadgeCardProps> = ({ badge, onViewDetails, onShare }) 
   const getBadgeIcon = (badgeType: string) => {
     switch (badgeType) {
       case 'skill_master':
-        return <Trophy className="w-8 h-8 text-ucf-gold" />;
+        return <Trophy className="w-8 h-8 text-primary-500" />;
       case 'consistent_learner':
         return <Star className="w-8 h-8 text-blue-500" />;
       case 'quick_learner':
@@ -22,7 +22,7 @@ const BadgeCard: React.FC<BadgeCardProps> = ({ badge, onViewDetails, onShare }) 
   const getBadgeColor = (badgeType: string) => {
     switch (badgeType) {
       case 'skill_master':
-        return 'bg-ucf-gold bg-opacity-20 border-ucf-gold';
+        return 'bg-primary-50 border-primary-200';
       case 'consistent_learner':
         return 'bg-blue-50 border-blue-200';
       case 'quick_learner':
@@ -37,11 +37,11 @@ const BadgeCard: React.FC<BadgeCardProps> = ({ badge, onViewDetails, onShare }) 
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'beginner':
-        return 'badge-beginner';
+        return 'bg-green-100 text-green-800';
       case 'intermediate':
-        return 'badge-intermediate';
+        return 'bg-yellow-100 text-yellow-800';
       case 'advanced':
-        return 'badge-advanced';
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -115,7 +115,7 @@ const BadgeCard: React.FC<BadgeCardProps> = ({ badge, onViewDetails, onShare }) 
       </div>
 
       {/* Achievement Animation */}
-      <div className="absolute -top-2 -right-2 w-4 h-4 bg-ucf-gold rounded-full animate-pulse"></div>
+      <div className="absolute -top-2 -right-2 w-4 h-4 bg-primary-500 rounded-full animate-pulse"></div>
     </div>
   );
 };

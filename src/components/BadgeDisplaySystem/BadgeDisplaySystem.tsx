@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, List, Filter, Search, Calendar, TrendingUp } from 'lucide-react';
+import { Grid, List, Search, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { badgeAPI } from '../../services/api';
 import BadgeCard from './BadgeCard';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import Input from '../common/Input';
+import { Badge, BadgeFilters } from '../../types';
 
-const BadgeDisplaySystem = ({ studentId }) => {
-  const [badges, setBadges] = useState([]);
-  const [filteredBadges, setFilteredBadges] = useState([]);
+interface BadgeDisplaySystemProps {
+  studentId: string;
+}
+
+const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({ studentId }) => {
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [filteredBadges, setFilteredBadges] = useState<Badge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-  const [selectedBadge, setSelectedBadge] = useState(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<BadgeFilters>({
     search: '',
     badgeType: 'all',
     level: 'all',
@@ -85,12 +90,12 @@ const BadgeDisplaySystem = ({ studentId }) => {
     setFilteredBadges(filtered);
   };
 
-  const handleViewDetails = (badge) => {
+  const handleViewDetails = (badge: Badge) => {
     setSelectedBadge(badge);
     setShowModal(true);
   };
 
-  const handleShare = async (badge) => {
+  const handleShare = async (badge: Badge) => {
     try {
       const shareText = `I earned the ${badge.badge_type.replace('_', ' ')} badge for ${badge.skill} at ${badge.level} level!`;
       
@@ -115,11 +120,11 @@ const BadgeDisplaySystem = ({ studentId }) => {
     const byType = badges.reduce((acc, badge) => {
       acc[badge.badge_type] = (acc[badge.badge_type] || 0) + 1;
       return acc;
-    }, {});
+    }, {} as Record<string, number>);
     const byLevel = badges.reduce((acc, badge) => {
       acc[badge.level] = (acc[badge.level] || 0) + 1;
       return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
     return { total, byType, byLevel };
   };

@@ -1,0 +1,309 @@
+ACHIEVEUP FRONTEND - BACKEND COMPATIBILITY INSTRUCTIONS
+========================================================
+
+This document provides detailed instructions for the backend AI to ensure full compatibility with the AchieveUp frontend.
+
+CURRENT FRONTEND STATUS:
+- ✅ TypeScript implementation complete
+- ✅ UCF branding and color scheme implemented
+- ✅ Authentication system with Canvas integration
+- ✅ All components converted to use real API calls (no mock data)
+- ✅ Production-ready build configuration
+- ✅ Responsive design and accessibility features
+
+BACKEND URL: https://gen-ai-prime-3ddeabb35bd7.herokuapp.com
+
+REQUIRED BACKEND ENDPOINTS & IMPLEMENTATION:
+
+1. AUTHENTICATION ENDPOINTS
+---------------------------
+POST /auth/login
+- Purpose: User login with email/password
+- Request: { email: string, password: string }
+- Response: { token: string, user: User }
+- Status: NEEDS IMPLEMENTATION
+
+GET /auth/verify
+- Purpose: Verify authentication token
+- Headers: Authorization: Bearer <token>
+- Response: { user: User }
+- Status: NEEDS IMPLEMENTATION
+
+GET /auth/me
+- Purpose: Get current user information
+- Headers: Authorization: Bearer <token>
+- Response: { user: User }
+- Status: NEEDS IMPLEMENTATION
+
+2. CANVAS INTEGRATION ENDPOINTS
+-------------------------------
+GET /canvas/courses
+- Purpose: Get user's Canvas courses
+- Headers: Authorization: Bearer <token>
+- Response: CanvasCourse[]
+- Status: NEEDS IMPLEMENTATION
+
+GET /canvas/courses/{courseId}/quizzes
+- Purpose: Get quizzes for a specific course
+- Headers: Authorization: Bearer <token>
+- Response: CanvasQuiz[]
+- Status: NEEDS IMPLEMENTATION
+
+GET /canvas/quizzes/{quizId}/questions
+- Purpose: Get questions for a specific quiz
+- Headers: Authorization: Bearer <token>
+- Response: CanvasQuestion[]
+- Status: NEEDS IMPLEMENTATION
+
+3. ACHIEVEUP CORE ENDPOINTS
+---------------------------
+POST /achieveup/matrix/create
+- Purpose: Create skill matrix for a course
+- Request: { course_id: string, matrix_name: string, skills: string[] }
+- Response: SkillMatrix
+- Status: NEEDS IMPLEMENTATION
+
+GET /achieveup/matrix/{matrixId}
+- Purpose: Get specific skill matrix
+- Response: SkillMatrix
+- Status: NEEDS IMPLEMENTATION
+
+PUT /achieveup/matrix/{matrixId}
+- Purpose: Update skill matrix
+- Request: { skills: string[] }
+- Response: SkillMatrix
+- Status: NEEDS IMPLEMENTATION
+
+POST /achieveup/skills/assign
+- Purpose: Assign skills to quiz questions
+- Request: { course_id: string, question_skills: { [questionId]: string[] } }
+- Response: void
+- Status: NEEDS IMPLEMENTATION
+
+POST /achieveup/skills/suggest
+- Purpose: Get AI-powered skill suggestions
+- Request: { question_text: string, course_context?: string }
+- Response: string[]
+- Status: NEEDS IMPLEMENTATION
+
+POST /achieveup/badges/generate
+- Purpose: Generate badges for student achievements
+- Request: { student_id: string, course_id: string, skill_levels: { [skillName]: string } }
+- Response: Badge[]
+- Status: NEEDS IMPLEMENTATION
+
+GET /achieveup/badges/{studentId}
+- Purpose: Get all badges for a student
+- Response: Badge[]
+- Status: NEEDS IMPLEMENTATION
+
+GET /achieveup/progress/{studentId}/{courseId}
+- Purpose: Get skill progress for a student
+- Response: StudentProgress
+- Status: NEEDS IMPLEMENTATION
+
+POST /achieveup/progress/update
+- Purpose: Update skill assessment for a student
+- Request: { student_id: string, course_id: string, skill_updates: { [skillName]: { score: number, notes?: string } } }
+- Response: void
+- Status: NEEDS IMPLEMENTATION
+
+GET /achieveup/graphs/individual/{studentId}
+- Purpose: Generate individual skill graphs
+- Response: GraphData
+- Status: NEEDS IMPLEMENTATION
+
+GET /achieveup/export/{courseId}
+- Purpose: Export all AchieveUp data for a course
+- Response: CourseData
+- Status: NEEDS IMPLEMENTATION
+
+POST /achieveup/import
+- Purpose: Import AchieveUp data for a course
+- Request: { course_id: string, data: CourseData }
+- Response: void
+- Status: NEEDS IMPLEMENTATION
+
+DATA MODELS REQUIRED:
+====================
+
+User:
+{
+  id: string,
+  name: string,
+  email: string,
+  role: 'student' | 'instructor' | 'admin'
+}
+
+SkillMatrix:
+{
+  _id: string,
+  course_id: string,
+  matrix_name: string,
+  skills: string[],
+  created_at: string,
+  updated_at: string
+}
+
+Badge:
+{
+  _id: string,
+  student_id: string,
+  course_id: string,
+  skill: string,
+  badge_type: 'skill_master' | 'consistent_learner' | 'quick_learner' | 'persistent',
+  description: string,
+  earned_at: string,
+  level: 'beginner' | 'intermediate' | 'advanced'
+}
+
+StudentProgress:
+{
+  student_id: string,
+  course_id: string,
+  skill_progress: {
+    [skillName: string]: {
+      score: number,
+      level: 'beginner' | 'intermediate' | 'advanced',
+      total_questions: number,
+      correct_answers: number
+    }
+  },
+  last_updated: string
+}
+
+CanvasCourse:
+{
+  id: string,
+  name: string,
+  code: string
+}
+
+CanvasQuiz:
+{
+  id: string,
+  title: string,
+  course_id: string
+}
+
+CanvasQuestion:
+{
+  id: string,
+  question_text: string,
+  quiz_id: string
+}
+
+GraphData:
+{
+  timeSeriesData?: Array<{
+    date: string,
+    [skillName: string]: number | string
+  }>
+}
+
+CourseData:
+{
+  skill_matrices: SkillMatrix[],
+  badges: Badge[],
+  skill_progress: StudentProgress[]
+}
+
+AUTHENTICATION REQUIREMENTS:
+===========================
+1. JWT token-based authentication
+2. Token refresh mechanism
+3. Role-based access control (student/instructor/admin)
+4. Canvas OAuth integration for SSO
+5. Secure password hashing
+6. Session management
+
+SECURITY REQUIREMENTS:
+======================
+1. Input validation and sanitization
+2. CORS configuration for frontend domain
+3. Rate limiting on API endpoints
+4. HTTPS enforcement
+5. Secure headers (HSTS, CSP, etc.)
+6. SQL injection prevention
+7. XSS protection
+
+ERROR HANDLING:
+===============
+1. Consistent error response format:
+   {
+     error: string,
+     message: string,
+     statusCode: number
+   }
+2. Proper HTTP status codes
+3. Detailed error logging
+4. User-friendly error messages
+
+PERFORMANCE REQUIREMENTS:
+=========================
+1. Database indexing for frequent queries
+2. API response caching where appropriate
+3. Pagination for large datasets
+4. Efficient database queries
+5. Connection pooling
+
+TESTING REQUIREMENTS:
+=====================
+1. Unit tests for all endpoints
+2. Integration tests for API flows
+3. Authentication tests
+4. Error handling tests
+5. Performance tests
+
+DEPLOYMENT CONSIDERATIONS:
+==========================
+1. Environment variable configuration
+2. Database migration scripts
+3. Health check endpoints
+4. Monitoring and logging setup
+5. Backup strategies
+
+INTEGRATION WITH EXISTING KNOWGAP FEATURES:
+===========================================
+1. Ensure AchieveUp endpoints don't conflict with existing KnowGap endpoints
+2. Share authentication system with KnowGap
+3. Integrate with existing Canvas data
+4. Maintain consistent API response formats
+5. Share database connections where appropriate
+
+PRIORITY IMPLEMENTATION ORDER:
+==============================
+1. Authentication endpoints (critical for frontend functionality)
+2. Canvas integration endpoints (needed for course data)
+3. Basic AchieveUp CRUD operations (matrix, badges, progress)
+4. Analytics and reporting endpoints
+5. Advanced features (AI suggestions, data export/import)
+
+FRONTEND EXPECTATIONS:
+======================
+1. All API calls expect JSON responses
+2. Authentication tokens in Authorization header
+3. Error responses follow consistent format
+4. CORS enabled for frontend domain
+5. Rate limiting with proper error responses
+6. Real-time data updates (consider WebSocket implementation)
+
+ENVIRONMENT VARIABLES NEEDED:
+=============================
+- DATABASE_URL: MongoDB connection string
+- JWT_SECRET: Secret for JWT token signing
+- CANVAS_API_URL: Canvas API base URL
+- CANVAS_CLIENT_ID: Canvas OAuth client ID
+- CANVAS_CLIENT_SECRET: Canvas OAuth client secret
+- CORS_ORIGIN: Frontend domain for CORS
+- NODE_ENV: Environment (development/production)
+
+MONITORING & LOGGING:
+=====================
+1. Request/response logging
+2. Error tracking and alerting
+3. Performance metrics
+4. User activity tracking
+5. API usage analytics
+
+This frontend is production-ready and will work immediately once these backend endpoints are implemented. The authentication system is critical and should be implemented first to enable user access to the application. 
