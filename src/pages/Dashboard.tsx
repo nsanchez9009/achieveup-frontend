@@ -39,19 +39,29 @@ const Dashboard: React.FC = () => {
     averageScore: 0,
     recentActivity: []
   });
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Loading timeout failsafe
+  useEffect(() => {
+    if (loading) {
+      const timeout = setTimeout(() => {
+        setLoading(false);
+        setLoadError('Dashboard failed to load. Please check your connection or try again later.');
+      }, 10000); // 10 seconds
+      return () => clearTimeout(timeout);
+    }
+  }, [loading]);
 
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      
+      setLoadError(null);
       // Debug: Log user data to see if Canvas token is present
       console.log('Dashboard - User data:', user);
       console.log('Dashboard - Canvas API Token:', user?.canvasApiToken);
-      
       // Load user's courses from Canvas
       const coursesResponse = await canvasAPI.getCourses();
       setCourses(coursesResponse.data);
-      
       // Calculate stats based on real data
       setStats({
         totalSkills: coursesResponse.data.length, // Show actual course count
@@ -59,13 +69,11 @@ const Dashboard: React.FC = () => {
         averageScore: 0, // Will be calculated from score API
         recentActivity: [] // Will be calculated from recent activity
       });
-      
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
-      
+      setLoadError('Failed to load dashboard data. Please check your connection or try again later.');
       // Handle different error scenarios
       if (error.response?.status === 404) {
-        // Backend endpoints not implemented yet
         setCourses([]);
         setStats({
           totalSkills: 0,
@@ -75,7 +83,6 @@ const Dashboard: React.FC = () => {
         });
         toast.error('Canvas integration not available yet. Backend endpoints need to be implemented.');
       } else if (error.response?.status === 401) {
-        // User needs to set up Canvas API token
         setCourses([]);
         setStats({
           totalSkills: 0,
@@ -85,7 +92,6 @@ const Dashboard: React.FC = () => {
         });
         toast.error('Please set up your Canvas API token in Settings to view courses.');
       } else {
-        // Other errors
         setCourses([]);
         setStats({
           totalSkills: 0,
@@ -152,8 +158,27 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="flex flex-col justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+        <p className="text-gray-500">Loading dashboard...</p>
+        {loadError && (
+          <div className="mt-4 text-red-600 font-medium">{loadError}</div>
+        )}
+      </div>
+    );
+  }
+  if (loadError) {
+    return (
+      <div className="flex flex-col justify-center items-center h-64">
+        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+          </svg>
+        </div>
+        <p className="text-red-600 font-medium mb-2">{loadError}</p>
+        <Button variant="outline" onClick={() => loadDashboardData()}>
+          Retry
+        </Button>
       </div>
     );
   }
