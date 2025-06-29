@@ -11,6 +11,7 @@ interface AuthContextType {
   logout: () => void;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
+  backendAvailable: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +31,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [backendAvailable, setBackendAvailable] = useState(true);
 
   useEffect(() => {
     checkAuthStatus();
@@ -42,10 +44,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Verify token with backend
         const response = await authAPI.verify();
         setUser(response.data.user);
+        setBackendAvailable(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('authToken');
+      
+      // Check if it's a network error (backend unavailable)
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        console.log('Backend appears to be unavailable');
+        setBackendAvailable(false);
+        
+        // If we have a token but backend is down, keep the user logged in
+        // but show a warning
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          // Create a temporary user object from stored data
+          const storedUser = localStorage.getItem('userData');
+          if (storedUser) {
+            try {
+              setUser(JSON.parse(storedUser));
+              toast.error('Backend is currently unavailable. Some features may not work.');
+            } catch (e) {
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('userData');
+            }
+          }
+        }
+      } else {
+        // Other errors (401, etc.) - clear auth data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        setBackendAvailable(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -58,13 +88,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { token, user } = response.data;
       
       localStorage.setItem('authToken', token);
+      localStorage.setItem('userData', JSON.stringify(user));
       setUser(user);
+      setBackendAvailable(true);
       
       toast.success('Login successful!');
       return true;
     } catch (error: any) {
       console.error('Login failed:', error);
-      toast.error(error.response?.data?.message || 'Login failed');
+      
+      // Check if it's a network error (backend unavailable)
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        toast.error('Backend is currently unavailable. Please try again later.');
+        setBackendAvailable(false);
+      } else {
+        toast.error(error.response?.data?.message || 'Login failed');
+      }
       return false;
     } finally {
       setLoading(false);
@@ -78,13 +117,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { token, user } = response.data;
       
       localStorage.setItem('authToken', token);
+      localStorage.setItem('userData', JSON.stringify(user));
       setUser(user);
+      setBackendAvailable(true);
       
       toast.success('Account created successfully!');
       return true;
     } catch (error: any) {
       console.error('Signup failed:', error);
-      toast.error(error.response?.data?.message || 'Signup failed');
+      
+      // Check if it's a network error (backend unavailable)
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        toast.error('Backend is currently unavailable. Please try again later.');
+        setBackendAvailable(false);
+      } else {
+        toast.error(error.response?.data?.message || 'Signup failed');
+      }
       return false;
     } finally {
       setLoading(false);
@@ -93,6 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
     setUser(null);
     toast.success('Logged out successfully');
   };
@@ -100,10 +149,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshUser = async () => {
     try {
       const response = await authAPI.me();
-      setUser(response.data.user);
-    } catch (error) {
+      const user = response.data.user;
+      setUser(user);
+      localStorage.setItem('userData', JSON.stringify(user));
+      setBackendAvailable(true);
+    } catch (error: any) {
       console.error('Failed to refresh user:', error);
-      logout();
+      
+      // Check if it's a network error (backend unavailable)
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        setBackendAvailable(false);
+        // Don't logout if backend is just unavailable
+        toast.error('Backend is currently unavailable. Some features may not work.');
+      } else {
+        logout();
+      }
     }
   };
 
@@ -115,6 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     refreshUser,
     isAuthenticated: !!user,
+    backendAvailable,
   };
 
   return (
