@@ -41,7 +41,7 @@ const Navigation: React.FC = () => {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:ml-6 md:flex md:space-x-8">
+            <div className="hidden md:ml-6 md:flex md:space-x-4 lg:space-x-8">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.href;
@@ -50,14 +50,15 @@ const Navigation: React.FC = () => {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 whitespace-nowrap ${
                       isActive
                         ? 'border-ucf-gold text-gray-900'
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                     }`}
                   >
-                    <Icon className="w-4 h-4 mr-1" />
-                    {item.name}
+                    <Icon className="w-4 h-4 mr-1 flex-shrink-0" />
+                    <span className="hidden lg:inline">{item.name}</span>
+                    <span className="lg:hidden">{item.name.split(' ')[0]}</span>
                   </Link>
                 );
               })}
@@ -68,24 +69,27 @@ const Navigation: React.FC = () => {
           <div className="flex items-center">
             <div className="hidden md:flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <User className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-700">
+                <User className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                <span 
+                  className="text-sm text-gray-700 max-w-32 truncate cursor-help" 
+                  title={user?.name || user?.email || 'User'}
+                >
                   {user?.name || user?.email || 'User'}
                 </span>
               </div>
               <Link
                 to="/settings"
-                className="flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                className="flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200 flex-shrink-0"
               >
                 <Settings className="w-4 h-4 mr-1" />
-                Settings
+                <span className="hidden lg:inline">Settings</span>
               </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                className="flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200 flex-shrink-0"
               >
                 <LogOut className="w-4 h-4 mr-1" />
-                Logout
+                <span className="hidden lg:inline">Logout</span>
               </button>
             </div>
 
