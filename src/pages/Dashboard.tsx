@@ -40,6 +40,8 @@ const Dashboard: React.FC = () => {
     recentActivity: []
   });
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<any>(null);
+  const [hasRetried, setHasRetried] = useState(false);
 
   // Loading timeout failsafe
   useEffect(() => {
@@ -47,20 +49,25 @@ const Dashboard: React.FC = () => {
       const timeout = setTimeout(() => {
         setLoading(false);
         setLoadError('Dashboard failed to load. Please check your connection or try again later.');
+        setLastError('Timeout');
+        console.log('Dashboard: Loading timeout triggered');
       }, 10000); // 10 seconds
       return () => clearTimeout(timeout);
     }
   }, [loading]);
 
-  const loadDashboardData = useCallback(async () => {
+  const loadDashboardData = useCallback(async (isRetry = false) => {
+    if (loading) return; // Prevent concurrent loads
     try {
       setLoading(true);
       setLoadError(null);
+      setLastError(null);
       // Debug: Log user data to see if Canvas token is present
       console.log('Dashboard - User data:', user);
       console.log('Dashboard - Canvas API Token:', user?.canvasApiToken);
       // Load user's courses from Canvas
       const coursesResponse = await canvasAPI.getCourses();
+      console.log('Dashboard - Canvas courses response:', coursesResponse.data);
       setCourses(coursesResponse.data);
       // Calculate stats based on real data
       setStats({
@@ -69,54 +76,56 @@ const Dashboard: React.FC = () => {
         averageScore: 0, // Will be calculated from score API
         recentActivity: [] // Will be calculated from recent activity
       });
+      console.log('Dashboard - Stats set:', {
+        totalSkills: coursesResponse.data.length,
+        earnedBadges: 0,
+        averageScore: 0,
+        recentActivity: []
+      });
+      setHasRetried(false);
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
-      setLoadError('Failed to load dashboard data. Please check your connection or try again later.');
-      // Handle different error scenarios
-      if (error.response?.status === 404) {
-        setCourses([]);
-        setStats({
-          totalSkills: 0,
-          earnedBadges: 0,
-          averageScore: 0,
-          recentActivity: []
-        });
-        toast.error('Canvas integration not available yet. Backend endpoints need to be implemented.');
-      } else if (error.response?.status === 401) {
-        setCourses([]);
-        setStats({
-          totalSkills: 0,
-          earnedBadges: 0,
-          averageScore: 0,
-          recentActivity: []
-        });
-        toast.error('Please set up your Canvas API token in Settings to view courses.');
-      } else {
-        setCourses([]);
-        setStats({
-          totalSkills: 0,
-          earnedBadges: 0,
-          averageScore: 0,
-          recentActivity: []
-        });
-        toast.error('Failed to load dashboard data. Please try again later.');
+      setLastError(error);
+      setLoadError(error?.response?.data?.message || error.message || 'Failed to load dashboard data. Please check your connection or try again later.');
+      if (!isRetry) {
+        // Only show toast on first error, not on retry
+        if (error.response?.status === 404) {
+          toast.error('Canvas integration not available yet. Backend endpoints need to be implemented.');
+        } else if (error.response?.status === 401) {
+          toast.error('Please set up your Canvas API token in Settings to view courses.');
+        } else {
+          toast.error('Failed to load dashboard data. Please try again later.');
+        }
       }
+      setCourses([]);
+      setStats({
+        totalSkills: 0,
+        earnedBadges: 0,
+        averageScore: 0,
+        recentActivity: []
+      });
     } finally {
       setLoading(false);
+      console.log('Dashboard - Loading set to false');
     }
+  }, [user, loading]);
+
+  useEffect(() => {
+    console.log('Dashboard: useEffect - loadDashboardData');
+    loadDashboardData();
+    // Only run on mount or user change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Only reload when user changes, not on every render
+  // Remove loading from dependency to avoid infinite loop
   useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
-
-  // Reload dashboard data when user object changes (e.g., when Canvas token is updated)
-  useEffect(() => {
-    if (user && !loading) {
-      console.log('User object changed, reloading dashboard data');
+    if (user) {
+      console.log('Dashboard: user object changed, reloading dashboard data');
       loadDashboardData();
     }
-  }, [user?.canvasApiToken, user, loading, loadDashboardData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.canvasApiToken]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -164,6 +173,9 @@ const Dashboard: React.FC = () => {
         {loadError && (
           <div className="mt-4 text-red-600 font-medium">{loadError}</div>
         )}
+        {lastError && (
+          <div className="mt-2 text-xs text-red-400 break-all">Error: {typeof lastError === 'string' ? lastError : JSON.stringify(lastError?.response?.data || lastError, null, 2)}</div>
+        )}
       </div>
     );
   }
@@ -176,8 +188,11 @@ const Dashboard: React.FC = () => {
           </svg>
         </div>
         <p className="text-red-600 font-medium mb-2">{loadError}</p>
-        <Button variant="outline" onClick={() => loadDashboardData()}>
-          Retry
+        {lastError && (
+          <div className="mb-2 text-xs text-red-400 break-all">Error: {typeof lastError === 'string' ? lastError : JSON.stringify(lastError?.response?.data || lastError, null, 2)}</div>
+        )}
+        <Button variant="outline" onClick={() => { if (!loading && !hasRetried) { setHasRetried(true); loadDashboardData(true); }}} disabled={loading || hasRetried}>
+          {hasRetried ? 'Retrying...' : 'Retry'}
         </Button>
       </div>
     );
