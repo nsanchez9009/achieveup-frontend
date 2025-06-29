@@ -7,6 +7,7 @@ CURRENT STATUS:
 ✅ Backend: Fully implemented and running on Heroku
 ✅ Integration: ALL AchieveUp endpoints implemented and working
 ✅ Testing: All endpoints responding correctly (401 for invalid tokens, 400 for validation)
+⚠️ Canvas API Token: Frontend UI ready, backend needs enhanced token validation
 
 BACKEND STATUS:
 ==============
@@ -19,6 +20,7 @@ BACKEND STATUS:
 ✅ JWT authentication with proper error handling
 ✅ CORS configured for frontend domains
 ✅ Production ready on Heroku
+⚠️ Canvas API token validation and security needs enhancement
 
 REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
 =======================================
@@ -29,6 +31,7 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    POST /auth/signup ✅
    - Request: { name: string, email: string, password: string, canvasApiToken?: string }
    - Response: { token: string, user: User }
+   - Note: canvasApiToken should be validated with Canvas API before storing
    
    POST /auth/login ✅
    - Request: { email: string, password: string }
@@ -47,6 +50,7 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    - Request: { name: string, email: string, canvasApiToken?: string }
    - Response: { user: User }
    - IMPORTANT: Response includes updated user object with canvasApiToken field
+   - SECURITY: Validate canvasApiToken with Canvas API before storing
    
    PUT /auth/password ✅
    - Headers: Authorization: Bearer <token>
@@ -60,6 +64,7 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    - Headers: Authorization: Bearer <token>
    - Response: CanvasCourse[]
    - Note: Critical for dashboard functionality
+   - Note: Uses stored canvasApiToken from user profile
    
    GET /canvas/courses/{courseId}/quizzes ✅
    - Headers: Authorization: Bearer <token>
@@ -69,7 +74,22 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    - Headers: Authorization: Bearer <token>
    - Response: CanvasQuestion[]
 
-3. ACHIEVEUP CORE ENDPOINTS ✅:
+3. NEW CANVAS TOKEN VALIDATION ENDPOINTS (NEEDED ⚠️):
+   ===================================================
+   
+   POST /auth/validate-canvas-token ⚠️
+   - Request: { canvasApiToken: string }
+   - Response: { valid: boolean, message?: string }
+   - Purpose: Validate token with Canvas API before storing
+   - Implementation: Call Canvas API /users/self endpoint
+   
+   GET /canvas/test-connection ⚠️
+   - Headers: Authorization: Bearer <token>
+   - Response: { connected: boolean, message?: string }
+   - Purpose: Test if stored token is still valid
+   - Implementation: Test Canvas API connection using stored token
+
+4. ACHIEVEUP CORE ENDPOINTS ✅:
    ============================
    
    POST /achieveup/matrix/create ✅
@@ -91,7 +111,7 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    - Request: { question_text: string, course_context?: string }
    - Response: string[]
 
-4. BADGE MANAGEMENT ENDPOINTS ✅:
+5. BADGE MANAGEMENT ENDPOINTS ✅:
    ==============================
    
    POST /achieveup/badges/generate ✅
@@ -101,7 +121,7 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    GET /achieveup/badges/{studentId} ✅
    - Response: Badge[]
 
-5. PROGRESS TRACKING ENDPOINTS ✅:
+6. PROGRESS TRACKING ENDPOINTS ✅:
    ===============================
    
    GET /achieveup/progress/{studentId}/{courseId} ✅
@@ -111,7 +131,7 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    - Request: { skill_updates: { [skillName: string]: { score: number, notes?: string } } }
    - Response: StudentProgress
 
-6. ANALYTICS & EXPORT ENDPOINTS ✅:
+7. ANALYTICS & EXPORT ENDPOINTS ✅:
    ================================
    
    GET /achieveup/graphs/individual/{studentId} ✅
@@ -206,17 +226,102 @@ CourseData:
   badges: Badge[]
 }
 
+CANVAS API TOKEN SECURITY REQUIREMENTS ⚠️:
+==========================================
+
+1. DATABASE STORAGE:
+   - Encrypt canvasApiToken before storing in database
+   - Use environment variables for encryption keys
+   - Never store tokens in plain text
+
+2. API VALIDATION:
+   - Validate token format before storing (Canvas tokens are typically 64+ characters)
+   - Test token with Canvas API before storing
+   - Handle token expiration gracefully
+
+3. FRONTEND SECURITY:
+   - Never return full token in API responses after initial storage
+   - Only return token status (set/not set) to frontend
+   - Clear token from user object in responses
+
+4. TOKEN MANAGEMENT:
+   - Implement token refresh mechanism
+   - Handle Canvas API rate limits
+   - Provide clear error messages for invalid tokens
+
+BACKEND IMPLEMENTATION GUIDE:
+============================
+
+1. Database Schema Update:
+```sql
+-- Add encrypted canvas token field
+ALTER TABLE users ADD COLUMN canvas_api_token_encrypted VARCHAR(255);
+ALTER TABLE users ADD COLUMN canvas_token_created_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN canvas_token_last_validated TIMESTAMP;
+```
+
+2. Canvas Token Validation Function:
+```javascript
+const validateCanvasToken = async (token) => {
+  try {
+    const response = await fetch('https://canvas.instructure.com/api/v1/users/self', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
+};
+```
+
+3. Token Encryption/Decryption:
+```javascript
+const encryptToken = (token) => {
+  // Use crypto library to encrypt token
+  return encryptedToken;
+};
+
+const decryptToken = (encryptedToken) => {
+  // Use crypto library to decrypt token
+  return decryptedToken;
+};
+```
+
+4. Profile Update with Token Validation:
+```javascript
+app.put('/auth/profile', authenticateToken, async (req, res) => {
+  const { name, email, canvasApiToken } = req.body;
+  
+  if (canvasApiToken) {
+    // Validate token with Canvas
+    const isValid = await validateCanvasToken(canvasApiToken);
+    if (!isValid) {
+      return res.status(400).json({ message: 'Invalid Canvas API token' });
+    }
+    
+    // Encrypt and store token
+    const encryptedToken = encryptToken(canvasApiToken);
+    // Update user with encrypted token
+  }
+  
+  // Update other profile fields
+  // Return user object WITHOUT the token
+});
+```
+
 FRONTEND READY FEATURES:
 =======================
 ✅ Dashboard with error handling
 ✅ Navigation with working links
-✅ Settings page for Canvas API token management
+✅ Settings page with 4-quadrant layout (profile top-left, token bottom-left, password spans right)
+✅ Canvas API token management UI (set, reveal, edit, clear)
 ✅ Skill Matrix Creator
 ✅ Skill Assignment Interface
 ✅ Badge Display System
 ✅ Progress Dashboard
 ✅ Analytics Dashboard
 ✅ Login/Signup pages
+✅ Backend status indicator in navigation
 
 NOTES:
 ======
@@ -226,7 +331,17 @@ NOTES:
 - Canvas API token must be included in user object responses for UI state detection
 - Backend URL: https://gen-ai-prime-3ddeabb35bd7.herokuapp.com
 - All endpoints return proper error responses (401 for invalid tokens, 400 for validation)
+- Frontend handles backend unavailability gracefully with demo mode
+- Settings page uses 4-quadrant layout for better UX
 
-STATUS: ✅ BACKEND FULLY IMPLEMENTED - FRONTEND READY FOR INTEGRATION
+PRIORITY BACKEND UPDATES NEEDED:
+===============================
+1. ⚠️ Implement Canvas token validation endpoint
+2. ⚠️ Add token encryption/decryption
+3. ⚠️ Update profile endpoint to validate tokens before storing
+4. ⚠️ Add token connection testing endpoint
+5. ⚠️ Handle token expiration and refresh
+
+STATUS: ✅ FRONTEND FULLY IMPLEMENTED - BACKEND NEEDS CANVAS TOKEN ENHANCEMENTS
 
 Last Updated: December 2024 
