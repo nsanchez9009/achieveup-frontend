@@ -264,7 +264,6 @@ const Settings: React.FC = () => {
               type="submit"
               loading={loading}
               disabled={loading}
-              className="w-full"
             >
               <Save className="w-4 h-4 mr-2" />
               Update Profile

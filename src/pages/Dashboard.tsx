@@ -44,6 +44,13 @@ const Dashboard: React.FC = () => {
     loadDashboardData();
   }, []);
 
+  // Reload dashboard data when user's Canvas token changes
+  useEffect(() => {
+    if (user?.canvasApiToken) {
+      loadDashboardData();
+    }
+  }, [user?.canvasApiToken]);
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);
