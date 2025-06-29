@@ -108,6 +108,8 @@ export const canvasAPI = {
     api.get(`/canvas/courses/${courseId}/quizzes`),
   getQuestions: (quizId: string): Promise<AxiosResponse<CanvasQuestion[]>> => 
     api.get(`/canvas/quizzes/${quizId}/questions`),
+  testConnection: (): Promise<AxiosResponse<{ connected: boolean; message?: string; user_info?: object }>> => 
+    api.get('/canvas/test-connection'),
 };
 
 // Authentication
@@ -124,6 +126,8 @@ export const authAPI = {
     api.put('/auth/profile', data),
   changePassword: (data: { currentPassword: string; newPassword: string }): Promise<AxiosResponse<void>> => 
     api.put('/auth/password', data),
+  validateCanvasToken: (data: { canvasApiToken: string }): Promise<AxiosResponse<{ valid: boolean; message?: string; user_info?: object }>> => 
+    api.post('/auth/validate-canvas-token', data),
 };
 
 export default api; 

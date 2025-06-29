@@ -4,7 +4,7 @@ export interface User {
   name: string;
   email: string;
   role: 'student' | 'instructor' | 'admin';
-  canvasApiToken?: string;
+  hasCanvasToken?: boolean;
 }
 
 export interface SignupRequest {

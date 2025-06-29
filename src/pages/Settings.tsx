@@ -3,9 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
-import { User, Lock, Key, Info, Save, Edit, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Key, Info, Save, Edit, Eye, EyeOff, Wifi, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { authAPI } from '../services/api';
+import { authAPI, canvasAPI } from '../services/api';
 
 const Settings: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -13,6 +13,9 @@ const Settings: React.FC = () => {
   const [isEditingToken, setIsEditingToken] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [validatingToken, setValidatingToken] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; message?: string } | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -28,7 +31,7 @@ const Settings: React.FC = () => {
         ...prev,
         name: user.name || '',
         email: user.email || '',
-        canvasApiToken: user.canvasApiToken || ''
+        canvasApiToken: ''
       }));
     }
   }, [user]);
@@ -60,20 +63,73 @@ const Settings: React.FC = () => {
     }
   };
 
+  // Validate Canvas API token
+  const handleValidateToken = async (token: string) => {
+    setValidatingToken(true);
+    try {
+      const response = await authAPI.validateCanvasToken({ canvasApiToken: token });
+      if (response.data.valid) {
+        toast.success('Canvas API token is valid!');
+        return true;
+      } else {
+        toast.error(response.data.message || 'Invalid Canvas API token');
+        return false;
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to validate token');
+      return false;
+    } finally {
+      setValidatingToken(false);
+    }
+  };
+
+  // Test Canvas connection
+  const handleTestConnection = async () => {
+    setTestingConnection(true);
+    try {
+      const response = await canvasAPI.testConnection();
+      setConnectionStatus(response.data);
+      if (response.data.connected) {
+        toast.success('Canvas connection successful!');
+      } else {
+        toast.error(response.data.message || 'Canvas connection failed');
+      }
+    } catch (error: any) {
+      setConnectionStatus({ connected: false, message: 'Connection test failed' });
+      toast.error(error.response?.data?.message || 'Failed to test connection');
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   // Canvas API token update
   const handleUpdateToken = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!formData.canvasApiToken) {
+      toast.error('Please enter a Canvas API token');
+      return;
+    }
+    
     setLoading(true);
     try {
+      // First validate the token
+      const isValid = await handleValidateToken(formData.canvasApiToken);
+      if (!isValid) {
+        setLoading(false);
+        return;
+      }
+      
+      // If valid, update profile with the token
       await authAPI.updateProfile({
         name: user?.name || '',
         email: user?.email || '',
         canvasApiToken: formData.canvasApiToken
       });
       await refreshUser();
-      toast.success('Canvas API Token updated!');
+      toast.success('Canvas API Token updated successfully!');
       setIsEditingToken(false);
       setShowToken(false);
+      setFormData(prev => ({ ...prev, canvasApiToken: '' }));
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update Canvas API Token');
     } finally {
@@ -95,6 +151,7 @@ const Settings: React.FC = () => {
       setFormData(prev => ({ ...prev, canvasApiToken: '' }));
       setIsEditingToken(false);
       setShowToken(false);
+      setConnectionStatus(null);
       toast.success('Canvas API Token cleared!');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to clear Canvas API Token');
@@ -150,7 +207,7 @@ const Settings: React.FC = () => {
           </ol>
           <div className="mt-3 p-2 bg-white rounded border">
             <p className="text-xs font-medium text-gray-700 mb-1">Current Status:</p>
-            {user?.canvasApiToken ? (
+            {user?.hasCanvasToken ? (
               <p className="text-xs text-green-600">✅ Token is set and ready to use</p>
             ) : (
               <p className="text-xs text-orange-600">⚠️ No token set - courses won't load until you add one</p>
@@ -216,20 +273,63 @@ const Settings: React.FC = () => {
           </Card>
           {/* Canvas API Token - Bottom Left */}
           <Card className="p-6">
-            <div className="flex items-center mb-6">
-              <Key className="w-6 h-6 text-primary-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">Canvas API Token</h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <Key className="w-6 h-6 text-primary-600 mr-2" />
+                <h2 className="text-xl font-semibold text-gray-900">Canvas API Token</h2>
+              </div>
+              {user?.hasCanvasToken && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestConnection}
+                  loading={testingConnection}
+                  disabled={testingConnection}
+                >
+                  {connectionStatus?.connected ? (
+                    <Wifi className="w-4 h-4 mr-2 text-green-500" />
+                  ) : (
+                    <WifiOff className="w-4 h-4 mr-2 text-gray-500" />
+                  )}
+                  Test Connection
+                </Button>
+              )}
             </div>
+            
+            {/* Connection Status */}
+            {connectionStatus && (
+              <div className={`mb-4 p-3 rounded-lg border ${
+                connectionStatus.connected 
+                  ? 'bg-green-50 border-green-200 text-green-800' 
+                  : 'bg-red-50 border-red-200 text-red-800'
+              }`}>
+                <div className="flex items-center">
+                  {connectionStatus.connected ? (
+                    <Wifi className="w-4 h-4 mr-2" />
+                  ) : (
+                    <WifiOff className="w-4 h-4 mr-2" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {connectionStatus.connected ? 'Connected to Canvas' : 'Connection Failed'}
+                  </span>
+                </div>
+                {connectionStatus.message && (
+                  <p className="text-xs mt-1">{connectionStatus.message}</p>
+                )}
+              </div>
+            )}
+            
             {/* Status Indicator */}
             <div className="mb-4">
-              {user?.canvasApiToken ? (
+              {user?.hasCanvasToken ? (
                 <div className="flex items-center text-sm text-green-600"><div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>Token is set</div>
               ) : (
                 <div className="flex items-center text-sm text-gray-500"><div className="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>No token set</div>
               )}
             </div>
+            
             {/* Token Input/Display */}
-            {!user?.canvasApiToken ? (
+            {!user?.hasCanvasToken ? (
               // No token set - show input field
               <form onSubmit={handleUpdateToken} className="space-y-3">
                 <div className="relative">
@@ -247,9 +347,12 @@ const Settings: React.FC = () => {
                     required
                   />
                 </div>
-                <Button type="submit" size="sm" loading={loading} disabled={loading} className="w-full">
-                  <Save className="w-4 h-4 mr-2" />Set Token
-                </Button>
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" loading={loading || validatingToken} disabled={loading || validatingToken} className="flex-1">
+                    <Save className="w-4 h-4 mr-2" />
+                    {validatingToken ? 'Validating...' : 'Set Token'}
+                  </Button>
+                </div>
               </form>
             ) : isEditingToken ? (
               // Editing token - show input field
@@ -270,38 +373,19 @@ const Settings: React.FC = () => {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button type="submit" size="sm" loading={loading} disabled={loading}>
-                    <Save className="w-4 h-4 mr-2" />Save
+                  <Button type="submit" size="sm" loading={loading || validatingToken} disabled={loading || validatingToken}>
+                    <Save className="w-4 h-4 mr-2" />
+                    {validatingToken ? 'Validating...' : 'Save'}
                   </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => { setIsEditingToken(false); setShowToken(false); setFormData(prev => ({ ...prev, canvasApiToken: user.canvasApiToken || '' })); }} disabled={loading}>Cancel</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setIsEditingToken(false); setShowToken(false); setFormData(prev => ({ ...prev, canvasApiToken: '' })); }} disabled={loading}>Cancel</Button>
                 </div>
               </form>
-            ) : !showToken ? (
-              // Token is set but hidden - show masked token
+            ) : (
+              // Token is set - show management options
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                   <span className="text-gray-500">••••••••••••••••••••••••••••••••</span>
-                  <Button variant="outline" size="sm" onClick={() => setShowToken(true)}>
-                    <Eye className="w-4 h-4 mr-2" />Reveal
-                  </Button>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setIsEditingToken(true)}>
-                    <Edit className="w-4 h-4 mr-2" />Edit
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleClearToken} disabled={loading} className="text-red-600 border-red-200 hover:text-red-800">
-                    Clear
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              // Token is revealed - show actual token
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                  <span className="font-mono text-sm break-all">{user.canvasApiToken}</span>
-                  <Button variant="outline" size="sm" onClick={() => setShowToken(false)}>
-                    <EyeOff className="w-4 h-4 mr-2" />Hide
-                  </Button>
+                  <span className="text-xs text-gray-400">Token stored securely</span>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setIsEditingToken(true)}>
