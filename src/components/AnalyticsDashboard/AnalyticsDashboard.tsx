@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { Download, Filter, TrendingUp, Users, Target, Award } from 'lucide-react';
+import { Download, Filter, TrendingUp, Users, Target, Award, BarChart3 } from 'lucide-react';
 import { analyticsAPI } from '../../services/api';
 import Card from '../common/Card';
 import Button from '../common/Button';
@@ -19,11 +19,23 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
     distribution: SkillDistributionData[];
     trends: TrendData[];
     radar: RadarData[];
+    summary?: {
+      totalStudents: number;
+      averageScore: number;
+      badgesEarned: number;
+      skillsTracked: number;
+    };
   }>({
     performance: [],
     distribution: [],
     trends: [],
-    radar: []
+    radar: [],
+    summary: {
+      totalStudents: 0,
+      averageScore: 0,
+      badgesEarned: 0,
+      skillsTracked: 0
+    }
   });
 
   const loadAnalyticsData = useCallback(async (): Promise<void> => {
@@ -37,11 +49,30 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
         distribution: response.data.distribution || [],
         trends: response.data.trends || [],
         radar: response.data.radar || [],
+        summary: response.data.summary || {
+          totalStudents: 0,
+          averageScore: 0,
+          badgesEarned: 0,
+          skillsTracked: 0
+        }
       });
       
     } catch (error) {
       console.error('Error loading analytics data:', error);
-      toast.error('Failed to load analytics data');
+      // Set empty data when API fails
+      setData({
+        performance: [],
+        distribution: [],
+        trends: [],
+        radar: [],
+        summary: {
+          totalStudents: 0,
+          averageScore: 0,
+          badgesEarned: 0,
+          skillsTracked: 0
+        }
+      });
+      toast.error('Failed to load analytics data. Backend endpoints need to be implemented.');
     } finally {
       setLoading(false);
     }
@@ -95,6 +126,28 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ucf-gold"></div>
+      </div>
+    );
+  }
+
+  // Check if we have any data
+  const hasData = data.performance.length > 0 || data.distribution.length > 0 || data.trends.length > 0 || data.radar.length > 0;
+
+  if (!hasData) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <BarChart3 className="w-8 h-8 text-gray-400" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Analytics Data Available</h2>
+          <p className="text-gray-600 mb-4">
+            Analytics data will appear here once the backend endpoints are implemented and you have course data.
+          </p>
+          <p className="text-sm text-gray-500">
+            This feature requires: Canvas integration, skill matrices, and student progress data.
+          </p>
+        </div>
       </div>
     );
   }
@@ -156,7 +209,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
           <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-4">
             <Users className="w-6 h-6 text-blue-600" />
           </div>
-          <div className="text-2xl font-bold text-gray-900">24</div>
+          <div className="text-2xl font-bold text-gray-900">{data.summary?.totalStudents || 0}</div>
           <div className="text-sm text-gray-600">Total Students</div>
         </Card>
 
@@ -164,7 +217,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
           <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mx-auto mb-4">
             <TrendingUp className="w-6 h-6 text-green-600" />
           </div>
-          <div className="text-2xl font-bold text-gray-900">78%</div>
+          <div className="text-2xl font-bold text-gray-900">{data.summary?.averageScore || 0}%</div>
           <div className="text-sm text-gray-600">Average Score</div>
         </Card>
 
@@ -172,7 +225,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
           <div className="flex items-center justify-center w-12 h-12 bg-ucf-gold bg-opacity-20 rounded-lg mx-auto mb-4">
             <Award className="w-6 h-6 text-ucf-gold" />
           </div>
-          <div className="text-2xl font-bold text-gray-900">156</div>
+          <div className="text-2xl font-bold text-gray-900">{data.summary?.badgesEarned || 0}</div>
           <div className="text-sm text-gray-600">Badges Earned</div>
         </Card>
 
@@ -180,7 +233,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
           <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg mx-auto mb-4">
             <Target className="w-6 h-6 text-purple-600" />
           </div>
-          <div className="text-2xl font-bold text-gray-900">12</div>
+          <div className="text-2xl font-bold text-gray-900">{data.summary?.skillsTracked || 0}</div>
           <div className="text-sm text-gray-600">Skills Tracked</div>
         </Card>
       </div>

@@ -107,6 +107,12 @@ export interface GraphData {
   distribution?: SkillDistributionData[];
   trends?: TrendData[];
   radar?: RadarData[];
+  summary?: {
+    totalStudents: number;
+    averageScore: number;
+    badgesEarned: number;
+    skillsTracked: number;
+  };
 }
 
 export interface CourseData {
