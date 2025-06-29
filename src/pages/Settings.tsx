@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
-import { User, Lock, Key, Info, Save, Edit, Eye, EyeOff, Wifi, WifiOff } from 'lucide-react';
+import { User, Lock, Key, Info, Save, Edit, Wifi, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI, canvasAPI } from '../services/api';
 
@@ -11,7 +11,6 @@ const Settings: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingToken, setIsEditingToken] = useState(false);
-  const [showToken, setShowToken] = useState(false);
   const [loading, setLoading] = useState(false);
   const [validatingToken, setValidatingToken] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
@@ -128,7 +127,6 @@ const Settings: React.FC = () => {
       await refreshUser();
       toast.success('Canvas API Token updated successfully!');
       setIsEditingToken(false);
-      setShowToken(false);
       setFormData(prev => ({ ...prev, canvasApiToken: '' }));
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update Canvas API Token');
@@ -150,7 +148,6 @@ const Settings: React.FC = () => {
       await refreshUser();
       setFormData(prev => ({ ...prev, canvasApiToken: '' }));
       setIsEditingToken(false);
-      setShowToken(false);
       setConnectionStatus(null);
       toast.success('Canvas API Token cleared!');
     } catch (error: any) {
@@ -377,7 +374,7 @@ const Settings: React.FC = () => {
                     <Save className="w-4 h-4 mr-2" />
                     {validatingToken ? 'Validating...' : 'Save'}
                   </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => { setIsEditingToken(false); setShowToken(false); setFormData(prev => ({ ...prev, canvasApiToken: '' })); }} disabled={loading}>Cancel</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setIsEditingToken(false); setFormData(prev => ({ ...prev, canvasApiToken: '' })); }} disabled={loading}>Cancel</Button>
                 </div>
               </form>
             ) : (

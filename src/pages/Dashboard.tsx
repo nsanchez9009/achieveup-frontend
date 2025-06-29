@@ -46,10 +46,10 @@ const Dashboard: React.FC = () => {
 
   // Reload dashboard data when user's Canvas token changes
   useEffect(() => {
-    if (user?.canvasApiToken) {
+    if (user?.hasCanvasToken) {
       loadDashboardData();
     }
-  }, [user?.canvasApiToken]);
+  }, [user?.hasCanvasToken]);
 
   const loadDashboardData = async () => {
     try {
@@ -179,7 +179,7 @@ const Dashboard: React.FC = () => {
               </p>
               {stats.totalSkills === 0 && (
                 <p className="text-xs text-gray-500 mt-1">
-                  {user?.canvasApiToken ? 'Loading...' : 'Set up Canvas token'}
+                  {user?.hasCanvasToken ? 'Loading...' : 'Set up Canvas token'}
                 </p>
               )}
             </div>
@@ -278,12 +278,12 @@ const Dashboard: React.FC = () => {
               </div>
               <p className="text-gray-500 mb-2">No courses found</p>
               <p className="text-sm text-gray-400 mb-4">
-                {user?.canvasApiToken 
+                {user?.hasCanvasToken 
                   ? "Canvas integration is being set up. Check back soon!"
                   : "Set up your Canvas API token in Settings to view your courses."
                 }
               </p>
-              {!user?.canvasApiToken && (
+              {!user?.hasCanvasToken && (
                 <Button size="sm" variant="outline" onClick={() => window.location.href = '/settings'}>
                   Go to Settings
                 </Button>
@@ -315,12 +315,12 @@ const Dashboard: React.FC = () => {
             </div>
             <p className="text-gray-500 mb-2">No recent activity to display</p>
             <p className="text-sm text-gray-400 mb-4">
-              {user?.canvasApiToken 
+              {user?.hasCanvasToken 
                 ? "Complete assessments and earn badges to see your activity here"
                 : "Set up Canvas integration to start tracking your progress"
               }
             </p>
-            {!user?.canvasApiToken && (
+            {!user?.hasCanvasToken && (
               <Button size="sm" variant="outline" onClick={() => window.location.href = '/settings'}>
                 Set Up Canvas
               </Button>
