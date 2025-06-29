@@ -170,9 +170,9 @@ const Settings: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Account Settings</h1>
         <p className="text-gray-600">Manage your account information and preferences</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left column: Profile + Canvas Token */}
-        <div className="md:col-span-1 flex flex-col gap-8">
+        <div className="lg:col-span-1 flex flex-col gap-8">
           {/* Profile Info */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
@@ -221,7 +221,7 @@ const Settings: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900">Canvas API Token</h2>
             </div>
             {/* Status Indicator */}
-            <div className="mb-2">
+            <div className="mb-4">
               {user?.canvasApiToken ? (
                 <div className="flex items-center text-sm text-green-600"><div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>Token is set</div>
               ) : (
@@ -229,7 +229,30 @@ const Settings: React.FC = () => {
               )}
             </div>
             {/* Token Input/Display */}
-            {!user?.canvasApiToken || isEditingToken ? (
+            {!user?.canvasApiToken ? (
+              // No token set - show input field
+              <form onSubmit={handleUpdateToken} className="space-y-3">
+                <div className="relative">
+                  <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    name="canvasApiToken"
+                    type="text"
+                    value={formData.canvasApiToken}
+                    onChange={handleChange}
+                    placeholder="Paste your Canvas API token"
+                    className="pl-10"
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
+                    required
+                  />
+                </div>
+                <Button type="submit" size="sm" loading={loading} disabled={loading} className="w-full">
+                  <Save className="w-4 h-4 mr-2" />Set Token
+                </Button>
+              </form>
+            ) : isEditingToken ? (
+              // Editing token - show input field
               <form onSubmit={handleUpdateToken} className="space-y-3">
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -247,28 +270,46 @@ const Settings: React.FC = () => {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button type="submit" size="sm" loading={loading} disabled={loading}><Save className="w-4 h-4 mr-2" />Save</Button>
-                  {user?.canvasApiToken && (
-                    <Button type="button" variant="outline" size="sm" onClick={() => { setIsEditingToken(false); setShowToken(false); setFormData(prev => ({ ...prev, canvasApiToken: user.canvasApiToken || '' })); }} disabled={loading}>Cancel</Button>
-                  )}
+                  <Button type="submit" size="sm" loading={loading} disabled={loading}>
+                    <Save className="w-4 h-4 mr-2" />Save
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setIsEditingToken(false); setShowToken(false); setFormData(prev => ({ ...prev, canvasApiToken: user.canvasApiToken || '' })); }} disabled={loading}>Cancel</Button>
                 </div>
               </form>
             ) : !showToken ? (
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                <span className="text-gray-500">••••••••••••••••••••••••••••••••</span>
+              // Token is set but hidden - show masked token
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                  <span className="text-gray-500">••••••••••••••••••••••••••••••••</span>
+                  <Button variant="outline" size="sm" onClick={() => setShowToken(true)}>
+                    <Eye className="w-4 h-4 mr-2" />Reveal
+                  </Button>
+                </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setShowToken(true)}><Eye className="w-4 h-4 mr-2" />Reveal</Button>
-                  <Button variant="outline" size="sm" onClick={() => setIsEditingToken(true)}><Edit className="w-4 h-4 mr-2" />Edit</Button>
-                  <Button variant="outline" size="sm" onClick={handleClearToken} disabled={loading} className="text-red-600 border-red-200 hover:text-red-800">Clear</Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsEditingToken(true)}>
+                    <Edit className="w-4 h-4 mr-2" />Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleClearToken} disabled={loading} className="text-red-600 border-red-200 hover:text-red-800">
+                    Clear
+                  </Button>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                <span className="font-mono text-sm break-all">{user.canvasApiToken}</span>
+              // Token is revealed - show actual token
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                  <span className="font-mono text-sm break-all">{user.canvasApiToken}</span>
+                  <Button variant="outline" size="sm" onClick={() => setShowToken(false)}>
+                    <EyeOff className="w-4 h-4 mr-2" />Hide
+                  </Button>
+                </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setShowToken(false)}><EyeOff className="w-4 h-4 mr-2" />Hide</Button>
-                  <Button variant="outline" size="sm" onClick={() => setIsEditingToken(true)}><Edit className="w-4 h-4 mr-2" />Edit</Button>
-                  <Button variant="outline" size="sm" onClick={handleClearToken} disabled={loading} className="text-red-600 border-red-200 hover:text-red-800">Clear</Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsEditingToken(true)}>
+                    <Edit className="w-4 h-4 mr-2" />Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleClearToken} disabled={loading} className="text-red-600 border-red-200 hover:text-red-800">
+                    Clear
+                  </Button>
                 </div>
               </div>
             )}
@@ -276,7 +317,7 @@ const Settings: React.FC = () => {
           </Card>
         </div>
         {/* Right column: Password Reset */}
-        <div className="md:col-span-2">
+        <div className="lg:col-span-2">
           <Card className="p-6">
             <div className="flex items-center mb-6">
               <Lock className="w-6 h-6 text-primary-600 mr-2" />
