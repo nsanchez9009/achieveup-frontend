@@ -237,12 +237,12 @@ const Dashboard: React.FC = () => {
               const Icon = action.icon;
               return (
                 <Button 
-                  className="w-full justify-start" 
+                  className="w-full flex items-center justify-start" 
                   variant="outline" 
                   key={action.title}
                   onClick={() => window.location.href = action.href}
                 >
-                  <Icon className="w-4 h-4 mr-2" />
+                  <Icon className="w-4 h-4 mr-2 flex-shrink-0" />
                   {action.title}
                 </Button>
               );
