@@ -170,10 +170,10 @@ const Settings: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Account Settings</h1>
         <p className="text-gray-600">Manage your account information and preferences</p>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left column: Profile + Canvas Token */}
-        <div className="lg:col-span-1 flex flex-col gap-8">
-          {/* Profile Info */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left column: Profile (top) + Canvas Token (bottom) */}
+        <div className="flex flex-col gap-8">
+          {/* Profile Info - Top Left */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center">
@@ -214,7 +214,7 @@ const Settings: React.FC = () => {
               </form>
             )}
           </Card>
-          {/* Canvas API Token */}
+          {/* Canvas API Token - Bottom Left */}
           <Card className="p-6">
             <div className="flex items-center mb-6">
               <Key className="w-6 h-6 text-primary-600 mr-2" />
@@ -316,9 +316,9 @@ const Settings: React.FC = () => {
             <CanvasTokenInstructions />
           </Card>
         </div>
-        {/* Right column: Password Reset */}
-        <div className="lg:col-span-2">
-          <Card className="p-6">
+        {/* Right column: Password Reset - spans entire right side */}
+        <div className="lg:row-span-2">
+          <Card className="p-6 h-full">
             <div className="flex items-center mb-6">
               <Lock className="w-6 h-6 text-primary-600 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900">Change Password</h2>
