@@ -101,18 +101,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-            <p className="text-gray-600">Comprehensive insights into course performance and student progress</p>
-          </div>
-          <Button onClick={exportData} className="flex items-center gap-2">
-            <Download className="w-4 h-4" />
-            Export Data
-          </Button>
-        </div>
+      {/* Export Button */}
+      <div className="flex justify-end mb-8">
+        <Button onClick={exportData} className="flex items-center gap-2">
+          <Download className="w-4 h-4" />
+          Export Data
+        </Button>
       </div>
 
       {/* Filters */}

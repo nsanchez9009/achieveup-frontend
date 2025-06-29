@@ -140,12 +140,8 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ studentId, course
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Progress Dashboard</h1>
-          <p className="text-gray-600">Track your skill development and learning progress</p>
-        </div>
+      {/* Export Button */}
+      <div className="flex justify-end mb-6">
         <Button onClick={exportProgressData} variant="outline">
           <Download className="w-4 h-4 mr-2" />
           Export Data

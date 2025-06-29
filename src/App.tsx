@@ -51,32 +51,44 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/skill-matrix" element={
         <ProtectedRoute>
-          <SkillMatrixCreator />
+          <Layout>
+            <SkillMatrixCreator />
+          </Layout>
         </ProtectedRoute>
       } />
       <Route path="/skill-assignment" element={
         <ProtectedRoute>
-          <SkillAssignmentInterface />
+          <Layout>
+            <SkillAssignmentInterface />
+          </Layout>
         </ProtectedRoute>
       } />
       <Route path="/badges" element={
         <ProtectedRoute>
-          <BadgeDisplaySystem studentId="demo-student-123" />
+          <Layout>
+            <BadgeDisplaySystem studentId="demo-student-123" />
+          </Layout>
         </ProtectedRoute>
       } />
       <Route path="/progress" element={
         <ProtectedRoute>
-          <ProgressDashboard studentId="demo-student-123" courseId="demo-course-456" />
+          <Layout>
+            <ProgressDashboard studentId="demo-student-123" courseId="demo-course-456" />
+          </Layout>
         </ProtectedRoute>
       } />
       <Route path="/analytics" element={
         <ProtectedRoute>
-          <AnalyticsDashboard courseId="demo-course-456" />
+          <Layout>
+            <AnalyticsDashboard courseId="demo-course-456" />
+          </Layout>
         </ProtectedRoute>
       } />
       <Route path="/settings" element={
         <ProtectedRoute>
-          <Settings />
+          <Layout>
+            <Settings />
+          </Layout>
         </ProtectedRoute>
       } />
     </Routes>
