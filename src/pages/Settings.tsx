@@ -54,6 +54,29 @@ const Settings: React.FC = () => {
         email: formData.email
       };
       
+      await authAPI.updateProfile(updateData);
+      
+      await refreshUser();
+      
+      toast.success('Profile updated successfully!');
+      
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error('Update failed:', error);
+      toast.error(error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateCanvasToken = async () => {
+    setLoading(true);
+    try {
+      const updateData: any = {
+        name: user?.name || '',
+        email: user?.email || ''
+      };
+      
       // Only include canvasApiToken if it's not empty
       if (formData.canvasApiToken) {
         updateData.canvasApiToken = formData.canvasApiToken;
@@ -65,15 +88,13 @@ const Settings: React.FC = () => {
       
       // Show specific success message based on what was updated
       if (formData.canvasApiToken) {
-        toast.success('Profile and Canvas API Token updated successfully!');
+        toast.success('Canvas API Token updated successfully!');
       } else {
-        toast.success('Profile updated successfully!');
+        toast.success('Canvas API Token cleared successfully!');
       }
-      
-      setIsEditing(false);
     } catch (error: any) {
-      console.error('Update failed:', error);
-      toast.error(error.response?.data?.message || 'Failed to update profile');
+      console.error('Canvas token update failed:', error);
+      toast.error(error.response?.data?.message || 'Failed to update Canvas API Token');
     } finally {
       setLoading(false);
     }
@@ -200,25 +221,6 @@ const Settings: React.FC = () => {
                 </label>
                 <p className="text-gray-900">{user?.email || 'Not set'}</p>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Canvas API Token
-                </label>
-                <div className="flex items-center">
-                  {user?.canvasApiToken ? (
-                    <div className="flex items-center text-sm text-green-600">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                      Token is set
-                    </div>
-                  ) : (
-                    <div className="flex items-center text-sm text-gray-500">
-                      <div className="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
-                      No token set
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           ) : (
             // Edit form
@@ -251,72 +253,6 @@ const Settings: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label htmlFor="canvasApiToken" className="block text-sm font-medium text-gray-700">
-                  Canvas API Token
-                </label>
-                
-                {/* Token Status Indicator */}
-                <div className="mb-2">
-                  {user?.canvasApiToken ? (
-                    <div className="flex items-center text-sm text-green-600">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                      Canvas API Token is set
-                    </div>
-                  ) : (
-                    <div className="flex items-center text-sm text-gray-500">
-                      <div className="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
-                      No Canvas API Token set
-                    </div>
-                  )}
-                </div>
-                
-                <div className="relative">
-                  <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    name="canvasApiToken"
-                    type="text"
-                    value={showToken ? formData.canvasApiToken : (formData.canvasApiToken ? '••••••••••••••••••••••••••••••••' : '')}
-                    onChange={handleChange}
-                    placeholder="Paste your Canvas API token"
-                    className="pl-10 pr-20"
-                    autoComplete="off"
-                    data-lpignore="true"
-                    data-form-type="other"
-                    readOnly={!showToken && !!formData.canvasApiToken}
-                  />
-                  {formData.canvasApiToken && (
-                    <button
-                      type="button"
-                      onClick={() => setShowToken(!showToken)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                      title={showToken ? "Hide token" : "Show token"}
-                    >
-                      {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  )}
-                </div>
-                
-                <div className="mt-1 flex items-center justify-between">
-                  <p className="text-xs text-gray-500">
-                    This connects your account to Canvas for course data.
-                  </p>
-                  {formData.canvasApiToken && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData(prev => ({ ...prev, canvasApiToken: '' }));
-                        setShowToken(false);
-                        toast.success('Canvas API Token cleared');
-                      }}
-                      className="text-xs text-red-600 hover:text-red-800 transition-colors"
-                    >
-                      Clear Token
-                    </button>
-                  )}
-                </div>
-              </div>
-
               <div className="flex gap-3 pt-4">
                 <Button
                   type="submit"
@@ -331,7 +267,6 @@ const Settings: React.FC = () => {
                   variant="outline"
                   onClick={() => {
                     setIsEditing(false);
-                    setShowToken(false);
                     // Reset form data to current user data
                     if (user) {
                       setFormData(prev => ({
@@ -349,8 +284,94 @@ const Settings: React.FC = () => {
               </div>
             </form>
           )}
+        </Card>
 
-          {!isEditing && getCanvasTokenInstructions()}
+        {/* Canvas API Token Settings */}
+        <Card className="p-6">
+          <div className="flex items-center mb-6">
+            <Key className="w-6 h-6 text-primary-600 mr-2" />
+            <h2 className="text-xl font-semibold text-gray-900">Canvas Integration</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Canvas API Token
+              </label>
+              
+              {/* Token Status Indicator */}
+              <div className="mb-2">
+                {user?.canvasApiToken ? (
+                  <div className="flex items-center text-sm text-green-600">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Canvas API Token is set
+                  </div>
+                ) : (
+                  <div className="flex items-center text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
+                    No Canvas API Token set
+                  </div>
+                )}
+              </div>
+              
+              <div className="relative">
+                <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  name="canvasApiToken"
+                  type="text"
+                  value={showToken ? formData.canvasApiToken : (formData.canvasApiToken ? '••••••••••••••••••••••••••••••••' : '')}
+                  onChange={handleChange}
+                  placeholder="Paste your Canvas API token"
+                  className="pl-10 pr-20"
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-form-type="other"
+                  readOnly={!showToken && !!formData.canvasApiToken}
+                />
+                {formData.canvasApiToken && (
+                  <button
+                    type="button"
+                    onClick={() => setShowToken(!showToken)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    title={showToken ? "Hide token" : "Show token"}
+                  >
+                    {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                )}
+              </div>
+              
+              <div className="mt-1 flex items-center justify-between">
+                <p className="text-xs text-gray-500">
+                  This connects your account to Canvas for course data.
+                </p>
+                {formData.canvasApiToken && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, canvasApiToken: '' }));
+                      setShowToken(false);
+                      toast.success('Canvas API Token cleared');
+                    }}
+                    className="text-xs text-red-600 hover:text-red-800 transition-colors"
+                  >
+                    Clear Token
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <Button
+              onClick={handleUpdateCanvasToken}
+              loading={loading}
+              disabled={loading}
+              className="w-full"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Update Canvas Token
+            </Button>
+
+            {getCanvasTokenInstructions()}
+          </div>
         </Card>
 
         {/* Password Change */}
