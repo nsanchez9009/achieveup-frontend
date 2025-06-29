@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Target, Award, BarChart3, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/common/Card';
@@ -40,19 +40,7 @@ const Dashboard: React.FC = () => {
     recentActivity: []
   });
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  // Reload dashboard data when user object changes (e.g., when Canvas token is updated)
-  useEffect(() => {
-    if (user && !loading) {
-      console.log('User object changed, reloading dashboard data');
-      loadDashboardData();
-    }
-  }, [user?.canvasApiToken]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -110,7 +98,19 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  // Reload dashboard data when user object changes (e.g., when Canvas token is updated)
+  useEffect(() => {
+    if (user && !loading) {
+      console.log('User object changed, reloading dashboard data');
+      loadDashboardData();
+    }
+  }, [user?.canvasApiToken, user, loading, loadDashboardData]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
