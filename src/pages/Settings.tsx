@@ -3,18 +3,19 @@ import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
-import { Key, User, Lock, Info, Save, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Key, Info, Save, Edit, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '../services/api';
 
 const Settings: React.FC = () => {
   const { user, refreshUser } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    canvasApiToken: user?.canvasApiToken || '',
+    name: '',
+    email: '',
+    canvasApiToken: '',
     currentPassword: '',
     newPassword: '',
     confirmNewPassword: ''
@@ -24,8 +25,8 @@ const Settings: React.FC = () => {
     if (user) {
       setFormData(prev => ({
         ...prev,
-        name: user.name,
-        email: user.email,
+        name: user.name || '',
+        email: user.email || '',
         canvasApiToken: user.canvasApiToken || ''
       }));
     }
@@ -68,6 +69,8 @@ const Settings: React.FC = () => {
       } else {
         toast.success('Profile updated successfully!');
       }
+      
+      setIsEditing(false);
     } catch (error: any) {
       console.error('Update failed:', error);
       toast.error(error.response?.data?.message || 'Failed to update profile');
@@ -101,6 +104,8 @@ const Settings: React.FC = () => {
         newPassword: formData.newPassword
       });
       
+      toast.success('Password changed successfully!');
+      
       // Clear password fields
       setFormData(prev => ({
         ...prev,
@@ -108,8 +113,6 @@ const Settings: React.FC = () => {
         newPassword: '',
         confirmNewPassword: ''
       }));
-      
-      toast.success('Password changed successfully!');
     } catch (error: any) {
       console.error('Password change failed:', error);
       toast.error(error.response?.data?.message || 'Failed to change password');
@@ -164,113 +167,185 @@ const Settings: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Profile Settings */}
         <Card className="p-6">
-          <div className="flex items-center mb-6">
-            <User className="w-6 h-6 text-primary-600 mr-2" />
-            <h2 className="text-xl font-semibold text-gray-900">Profile Information</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <User className="w-6 h-6 text-primary-600 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-900">Profile Information</h2>
+            </div>
+            {!isEditing && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+            )}
           </div>
 
-          <form onSubmit={handleUpdateProfile} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full Name *
-              </label>
-              <Input
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Enter your full name"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address *
-              </label>
-              <Input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="your.email@example.com"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="canvasApiToken" className="block text-sm font-medium text-gray-700">
-                Canvas API Token
-              </label>
-              
-              {/* Token Status Indicator */}
-              <div className="mb-2">
-                {formData.canvasApiToken ? (
-                  <div className="flex items-center text-sm text-green-600">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    Canvas API Token is set
-                  </div>
-                ) : (
-                  <div className="flex items-center text-sm text-gray-500">
-                    <div className="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
-                    No Canvas API Token set
-                  </div>
-                )}
+          {!isEditing ? (
+            // Static view
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name
+                </label>
+                <p className="text-gray-900">{user?.name || 'Not set'}</p>
               </div>
-              
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address
+                </label>
+                <p className="text-gray-900">{user?.email || 'Not set'}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Canvas API Token
+                </label>
+                <div className="flex items-center">
+                  {user?.canvasApiToken ? (
+                    <div className="flex items-center text-sm text-green-600">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                      Token is set
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-sm text-gray-500">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
+                      No token set
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Edit form
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                  Full Name *
+                </label>
                 <Input
-                  name="canvasApiToken"
-                  type={showToken ? 'text' : 'password'}
-                  value={formData.canvasApiToken}
+                  name="name"
+                  type="text"
+                  value={formData.name}
                   onChange={handleChange}
-                  placeholder="Paste your Canvas API token"
-                  className="pl-10 pr-20"
-                  autoComplete="off"
-                  data-lpignore="true"
-                  data-form-type="other"
+                  placeholder="Enter your full name"
+                  required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowToken(!showToken)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  title={showToken ? "Hide token" : "Show token"}
-                >
-                  {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
-              
-              <div className="mt-1 flex items-center justify-between">
-                <p className="text-xs text-gray-500">
-                  This connects your account to Canvas for course data.
-                </p>
-                {formData.canvasApiToken && (
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email Address *
+                </label>
+                <Input
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="your.email@example.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="canvasApiToken" className="block text-sm font-medium text-gray-700">
+                  Canvas API Token
+                </label>
+                
+                {/* Token Status Indicator */}
+                <div className="mb-2">
+                  {formData.canvasApiToken ? (
+                    <div className="flex items-center text-sm text-green-600">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                      Canvas API Token is set
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-sm text-gray-500">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
+                      No Canvas API Token set
+                    </div>
+                  )}
+                </div>
+                
+                <div className="relative">
+                  <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    name="canvasApiToken"
+                    type={showToken ? 'text' : 'password'}
+                    value={formData.canvasApiToken}
+                    onChange={handleChange}
+                    placeholder="Paste your Canvas API token"
+                    className="pl-10 pr-20"
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
                   <button
                     type="button"
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, canvasApiToken: '' }));
-                      toast.success('Canvas API Token cleared');
-                    }}
-                    className="text-xs text-red-600 hover:text-red-800 transition-colors"
+                    onClick={() => setShowToken(!showToken)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    title={showToken ? "Hide token" : "Show token"}
                   >
-                    Clear Token
+                    {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
-                )}
+                </div>
+                
+                <div className="mt-1 flex items-center justify-between">
+                  <p className="text-xs text-gray-500">
+                    This connects your account to Canvas for course data.
+                  </p>
+                  {formData.canvasApiToken && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, canvasApiToken: '' }));
+                        toast.success('Canvas API Token cleared');
+                      }}
+                      className="text-xs text-red-600 hover:text-red-800 transition-colors"
+                    >
+                      Clear Token
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <Button
-              type="submit"
-              loading={loading}
-              disabled={loading}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Update Profile
-            </Button>
-          </form>
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="submit"
+                  loading={loading}
+                  disabled={loading}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    // Reset form data to current user data
+                    if (user) {
+                      setFormData(prev => ({
+                        ...prev,
+                        name: user.name || '',
+                        email: user.email || '',
+                        canvasApiToken: user.canvasApiToken || ''
+                      }));
+                    }
+                  }}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
 
-          {getCanvasTokenInstructions()}
+          {!isEditing && getCanvasTokenInstructions()}
         </Card>
 
         {/* Password Change */}
@@ -327,7 +402,6 @@ const Settings: React.FC = () => {
               type="submit"
               loading={loading}
               disabled={loading}
-              className="w-full"
             >
               Change Password
             </Button>
