@@ -1,0 +1,216 @@
+ACHIEVEUP FRONTEND - BACKEND COMPATIBILITY INSTRUCTIONS
+========================================================
+
+CURRENT STATUS:
+==============
+✅ Frontend: Fully implemented and working on http://localhost:3000
+✅ Backend: Running (KnowGap backend is active)
+❌ Integration: AchieveUp endpoints need to be implemented
+⚠️  Testing: Backend responds but AchieveUp endpoints return 404
+
+REQUIRED ENDPOINTS (PRIORITY ORDER):
+===================================
+
+1. AUTHENTICATION ENDPOINTS (PRIORITY 1):
+   ======================================
+   
+   POST /auth/signup
+   - Request: { name: string, email: string, password: string, canvasApiToken?: string }
+   - Response: { token: string, user: User }
+   
+   POST /auth/login
+   - Request: { email: string, password: string }
+   - Response: { token: string, user: User }
+   
+   GET /auth/verify
+   - Headers: Authorization: Bearer <token>
+   - Response: { user: User }
+   
+   GET /auth/me
+   - Headers: Authorization: Bearer <token>
+   - Response: { user: User }
+   
+   PUT /auth/profile
+   - Headers: Authorization: Bearer <token>
+   - Request: { name: string, email: string, canvasApiToken?: string }
+   - Response: { user: User }
+   - IMPORTANT: Response must include updated user object with canvasApiToken field
+   
+   PUT /auth/password
+   - Headers: Authorization: Bearer <token>
+   - Request: { currentPassword: string, newPassword: string }
+   - Response: void
+
+2. CANVAS INTEGRATION ENDPOINTS (PRIORITY 2):
+   ==========================================
+   
+   GET /canvas/courses
+   - Headers: Authorization: Bearer <token>
+   - Response: CanvasCourse[]
+   - Note: Critical for dashboard functionality
+   
+   GET /canvas/courses/{courseId}/quizzes
+   - Headers: Authorization: Bearer <token>
+   - Response: CanvasQuiz[]
+   
+   GET /canvas/quizzes/{quizId}/questions
+   - Headers: Authorization: Bearer <token>
+   - Response: CanvasQuestion[]
+
+3. ACHIEVEUP CORE ENDPOINTS (PRIORITY 3):
+   ======================================
+   
+   POST /achieveup/matrix/create
+   - Request: { course_id: string, matrix_name: string, skills: string[] }
+   - Response: SkillMatrix
+   
+   PUT /achieveup/matrix/{matrixId}
+   - Request: { skills: string[] }
+   - Response: SkillMatrix
+   
+   GET /achieveup/matrix/{courseId}
+   - Response: SkillMatrix
+   
+   POST /achieveup/skills/assign
+   - Request: { course_id: string, question_skills: { [questionId: string]: string[] } }
+   - Response: void
+   
+   POST /achieveup/skills/suggest
+   - Request: { question_text: string, course_context?: string }
+   - Response: string[]
+
+4. BADGE MANAGEMENT ENDPOINTS (PRIORITY 4):
+   ========================================
+   
+   POST /achieveup/badges/generate
+   - Request: { student_id: string, course_id: string, skill_levels: { [skillName: string]: 'beginner' | 'intermediate' | 'advanced' } }
+   - Response: Badge[]
+   
+   GET /achieveup/badges/{studentId}
+   - Response: Badge[]
+
+5. PROGRESS TRACKING ENDPOINTS (PRIORITY 5):
+   =========================================
+   
+   GET /achieveup/progress/{studentId}/{courseId}
+   - Response: StudentProgress
+   
+   POST /achieveup/progress/update
+   - Request: { skill_updates: { [skillName: string]: { score: number, notes?: string } } }
+   - Response: StudentProgress
+
+6. ANALYTICS & EXPORT ENDPOINTS (PRIORITY 6):
+   ==========================================
+   
+   GET /achieveup/graphs/individual/{studentId}
+   - Response: GraphData
+   
+   GET /achieveup/export/{courseId}
+   - Response: CourseData
+   
+   POST /achieveup/import
+   - Request: { course_id: string, data: CourseData }
+   - Response: void
+
+DATA MODELS:
+===========
+
+User:
+{
+  id: string,
+  name: string,
+  email: string,
+  role: 'student' | 'instructor' | 'admin',
+  canvasApiToken?: string  // Store securely, never send to frontend after entry
+}
+
+CanvasCourse:
+{
+  id: string,
+  name: string,
+  code: string
+}
+
+CanvasQuiz:
+{
+  id: string,
+  title: string,
+  course_id: string
+}
+
+CanvasQuestion:
+{
+  id: string,
+  question_text: string,
+  quiz_id: string
+}
+
+SkillMatrix:
+{
+  id: string,
+  course_id: string,
+  matrix_name: string,
+  skills: string[]
+}
+
+Badge:
+{
+  id: string,
+  name: string,
+  description: string,
+  skill_name: string,
+  level: 'beginner' | 'intermediate' | 'advanced'
+}
+
+StudentProgress:
+{
+  student_id: string,
+  course_id: string,
+  skill_progress: Record<string, {
+    score: number,
+    level: 'beginner' | 'intermediate' | 'advanced',
+    total_questions: number,
+    correct_answers: number
+  }>,
+  last_updated: string
+}
+
+GraphData:
+{
+  skill_progress: Record<string, number>,
+  time_series: Array<{ date: string, score: number }>,
+  summary: {
+    total_skills: number,
+    mastered_skills: number,
+    average_score: number
+  }
+}
+
+CourseData:
+{
+  course_id: string,
+  skill_matrices: SkillMatrix[],
+  student_progress: StudentProgress[],
+  badges: Badge[]
+}
+
+FRONTEND READY FEATURES:
+=======================
+✅ Dashboard with error handling
+✅ Navigation with working links
+✅ Settings page for Canvas API token management
+✅ Skill Matrix Creator
+✅ Skill Assignment Interface
+✅ Badge Display System
+✅ Progress Dashboard
+✅ Analytics Dashboard
+✅ Login/Signup pages
+
+NOTES:
+======
+- All endpoints require Authorization: Bearer <token> header except signup/login
+- Frontend is ready and waiting for backend implementation
+- Test user: nsanchez9009@gmail.com / password123
+- Canvas API token must be included in user object responses for UI state detection
+
+Last Updated: December 2024 
