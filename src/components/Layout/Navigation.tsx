@@ -71,9 +71,13 @@ const Navigation: React.FC = () => {
               {/* Backend Status Indicator */}
               <div className="flex items-center space-x-1">
                 {backendAvailable ? (
-                  <Wifi className="w-4 h-4 text-green-500" title="Backend connected" />
+                  <div title="Backend connected">
+                    <Wifi className="w-4 h-4 text-green-500" />
+                  </div>
                 ) : (
-                  <WifiOff className="w-4 h-4 text-red-500" title="Backend unavailable" />
+                  <div title="Backend unavailable">
+                    <WifiOff className="w-4 h-4 text-red-500" />
+                  </div>
                 )}
               </div>
               
@@ -126,9 +130,13 @@ const Navigation: React.FC = () => {
             {/* Mobile Backend Status */}
             <div className="flex items-center px-3 py-2">
               {backendAvailable ? (
-                <Wifi className="w-5 h-5 text-green-500 mr-3" />
+                <div title="Backend connected">
+                  <Wifi className="w-5 h-5 text-green-500 mr-3" />
+                </div>
               ) : (
-                <WifiOff className="w-5 h-5 text-red-500 mr-3" />
+                <div title="Backend unavailable">
+                  <WifiOff className="w-5 h-5 text-red-500 mr-3" />
+                </div>
               )}
               <span className="text-sm text-gray-600">
                 {backendAvailable ? 'Backend connected' : 'Backend unavailable'}
