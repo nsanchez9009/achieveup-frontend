@@ -54,15 +54,47 @@ const Dashboard: React.FC = () => {
       
       // Calculate stats based on real data
       setStats({
-        totalSkills: 0, // Will be calculated from skills API
+        totalSkills: coursesResponse.data.length, // Show actual course count
         earnedBadges: 0, // Will be calculated from badge API
         averageScore: 0, // Will be calculated from score API
         recentActivity: [] // Will be calculated from recent activity
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading dashboard data:', error);
-      toast.error('Failed to load dashboard data');
+      
+      // Handle different error scenarios
+      if (error.response?.status === 404) {
+        // Backend endpoints not implemented yet
+        setCourses([]);
+        setStats({
+          totalSkills: 0,
+          earnedBadges: 0,
+          averageScore: 0,
+          recentActivity: []
+        });
+        toast.error('Canvas integration not available yet. Backend endpoints need to be implemented.');
+      } else if (error.response?.status === 401) {
+        // User needs to set up Canvas API token
+        setCourses([]);
+        setStats({
+          totalSkills: 0,
+          earnedBadges: 0,
+          averageScore: 0,
+          recentActivity: []
+        });
+        toast.error('Please set up your Canvas API token in Settings to view courses.');
+      } else {
+        // Other errors
+        setCourses([]);
+        setStats({
+          totalSkills: 0,
+          earnedBadges: 0,
+          averageScore: 0,
+          recentActivity: []
+        });
+        toast.error('Failed to load dashboard data. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -135,7 +167,14 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Courses</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalSkills}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {stats.totalSkills > 0 ? stats.totalSkills : '0'}
+              </p>
+              {stats.totalSkills === 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {user?.canvasApiToken ? 'Loading...' : 'Set up Canvas token'}
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -211,7 +250,25 @@ const Dashboard: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">No courses found</p>
+            <div className="text-center py-6">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <p className="text-gray-500 mb-2">No courses found</p>
+              <p className="text-sm text-gray-400 mb-4">
+                {user?.canvasApiToken 
+                  ? "Canvas integration is being set up. Check back soon!"
+                  : "Set up your Canvas API token in Settings to view your courses."
+                }
+              </p>
+              {!user?.canvasApiToken && (
+                <Button size="sm" variant="outline" onClick={() => window.location.href = '/settings'}>
+                  Go to Settings
+                </Button>
+              )}
+            </div>
           )}
         </Card>
       </div>
