@@ -44,9 +44,21 @@ const Dashboard: React.FC = () => {
     loadDashboardData();
   }, []);
 
+  // Reload dashboard data when user object changes (e.g., when Canvas token is updated)
+  useEffect(() => {
+    if (user && !loading) {
+      console.log('User object changed, reloading dashboard data');
+      loadDashboardData();
+    }
+  }, [user?.canvasApiToken]);
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);
+      
+      // Debug: Log user data to see if Canvas token is present
+      console.log('Dashboard - User data:', user);
+      console.log('Dashboard - Canvas API Token:', user?.canvasApiToken);
       
       // Load user's courses from Canvas
       const coursesResponse = await canvasAPI.getCourses();
@@ -318,6 +330,10 @@ const Dashboard: React.FC = () => {
                 Set Up Canvas
               </Button>
             )}
+            {/* Debug info - remove in production */}
+            <div className="mt-2 text-xs text-gray-400">
+              Debug: Token status = {user?.canvasApiToken ? 'Set' : 'Not set'}
+            </div>
           </div>
         )}
       </Card>
