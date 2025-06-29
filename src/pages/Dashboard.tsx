@@ -224,7 +224,12 @@ const Dashboard: React.FC = () => {
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (
-                <Button className="w-full justify-start" variant="outline" key={action.title}>
+                <Button 
+                  className="w-full justify-start" 
+                  variant="outline" 
+                  key={action.title}
+                  onClick={() => window.location.href = action.href}
+                >
                   <Icon className="w-4 h-4 mr-2" />
                   {action.title}
                 </Button>
@@ -243,7 +248,15 @@ const Dashboard: React.FC = () => {
                     <p className="font-medium text-gray-900">{course.name}</p>
                     <p className="text-sm text-gray-600">{course.code}</p>
                   </div>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      toast('Course details page coming soon!');
+                      // TODO: Navigate to course detail page when implemented
+                      // window.location.href = `/course/${course.id}`;
+                    }}
+                  >
                     View
                   </Button>
                 </div>
@@ -276,11 +289,37 @@ const Dashboard: React.FC = () => {
       {/* Recent Activity */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-        <div className="text-center py-8">
-          <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">No recent activity to display</p>
-          <p className="text-sm text-gray-400">Complete assessments to see your activity here</p>
-        </div>
+        {stats.recentActivity.length > 0 ? (
+          <div className="space-y-3">
+            {stats.recentActivity.map((activity, index) => (
+              <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">{activity.title}</p>
+                  <p className="text-sm text-gray-600">{activity.description}</p>
+                  <p className="text-xs text-gray-500">{activity.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Users className="w-6 h-6 text-gray-400" />
+            </div>
+            <p className="text-gray-500 mb-2">No recent activity to display</p>
+            <p className="text-sm text-gray-400 mb-4">
+              {user?.canvasApiToken 
+                ? "Complete assessments and earn badges to see your activity here"
+                : "Set up Canvas integration to start tracking your progress"
+              }
+            </p>
+            {!user?.canvasApiToken && (
+              <Button size="sm" variant="outline" onClick={() => window.location.href = '/settings'}>
+                Set Up Canvas
+              </Button>
+            )}
+          </div>
+        )}
       </Card>
     </div>
   );
