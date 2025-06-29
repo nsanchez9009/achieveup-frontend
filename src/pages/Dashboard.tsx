@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Target, Award, BarChart3, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/common/Card';
@@ -39,36 +39,19 @@ const Dashboard: React.FC = () => {
     averageScore: 0,
     recentActivity: []
   });
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [lastError, setLastError] = useState<any>(null);
-  const [hasRetried, setHasRetried] = useState(false);
 
-  // Loading timeout failsafe
   useEffect(() => {
-    if (loading) {
-      const timeout = setTimeout(() => {
-        setLoading(false);
-        setLoadError('Dashboard failed to load. Please check your connection or try again later.');
-        setLastError('Timeout');
-        console.log('Dashboard: Loading timeout triggered');
-      }, 10000); // 10 seconds
-      return () => clearTimeout(timeout);
-    }
-  }, [loading]);
+    loadDashboardData();
+  }, []);
 
-  const loadDashboardData = useCallback(async (isRetry = false) => {
-    if (loading) return; // Prevent concurrent loads
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
-      setLoadError(null);
-      setLastError(null);
-      // Debug: Log user data to see if Canvas token is present
-      console.log('Dashboard - User data:', user);
-      console.log('Dashboard - Canvas API Token:', user?.canvasApiToken);
+      
       // Load user's courses from Canvas
       const coursesResponse = await canvasAPI.getCourses();
-      console.log('Dashboard - Canvas courses response:', coursesResponse.data);
       setCourses(coursesResponse.data);
+      
       // Calculate stats based on real data
       setStats({
         totalSkills: coursesResponse.data.length, // Show actual course count
@@ -76,56 +59,46 @@ const Dashboard: React.FC = () => {
         averageScore: 0, // Will be calculated from score API
         recentActivity: [] // Will be calculated from recent activity
       });
-      console.log('Dashboard - Stats set:', {
-        totalSkills: coursesResponse.data.length,
-        earnedBadges: 0,
-        averageScore: 0,
-        recentActivity: []
-      });
-      setHasRetried(false);
+      
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
-      setLastError(error);
-      setLoadError(error?.response?.data?.message || error.message || 'Failed to load dashboard data. Please check your connection or try again later.');
-      if (!isRetry) {
-        // Only show toast on first error, not on retry
-        if (error.response?.status === 404) {
-          toast.error('Canvas integration not available yet. Backend endpoints need to be implemented.');
-        } else if (error.response?.status === 401) {
-          toast.error('Please set up your Canvas API token in Settings to view courses.');
-        } else {
-          toast.error('Failed to load dashboard data. Please try again later.');
-        }
+      
+      // Handle different error scenarios
+      if (error.response?.status === 404) {
+        // Backend endpoints not implemented yet
+        setCourses([]);
+        setStats({
+          totalSkills: 0,
+          earnedBadges: 0,
+          averageScore: 0,
+          recentActivity: []
+        });
+        toast.error('Canvas integration not available yet. Backend endpoints need to be implemented.');
+      } else if (error.response?.status === 401) {
+        // User needs to set up Canvas API token
+        setCourses([]);
+        setStats({
+          totalSkills: 0,
+          earnedBadges: 0,
+          averageScore: 0,
+          recentActivity: []
+        });
+        toast.error('Please set up your Canvas API token in Settings to view courses.');
+      } else {
+        // Other errors
+        setCourses([]);
+        setStats({
+          totalSkills: 0,
+          earnedBadges: 0,
+          averageScore: 0,
+          recentActivity: []
+        });
+        toast.error('Failed to load dashboard data. Please try again later.');
       }
-      setCourses([]);
-      setStats({
-        totalSkills: 0,
-        earnedBadges: 0,
-        averageScore: 0,
-        recentActivity: []
-      });
     } finally {
       setLoading(false);
-      console.log('Dashboard - Loading set to false');
     }
-  }, [user, loading]);
-
-  useEffect(() => {
-    console.log('Dashboard: useEffect - loadDashboardData');
-    loadDashboardData();
-    // Only run on mount or user change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // Only reload when user changes, not on every render
-  // Remove loading from dependency to avoid infinite loop
-  useEffect(() => {
-    if (user) {
-      console.log('Dashboard: user object changed, reloading dashboard data');
-      loadDashboardData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.canvasApiToken]);
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -167,33 +140,8 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
-        <p className="text-gray-500">Loading dashboard...</p>
-        {loadError && (
-          <div className="mt-4 text-red-600 font-medium">{loadError}</div>
-        )}
-        {lastError && (
-          <div className="mt-2 text-xs text-red-400 break-all">Error: {typeof lastError === 'string' ? lastError : JSON.stringify(lastError?.response?.data || lastError, null, 2)}</div>
-        )}
-      </div>
-    );
-  }
-  if (loadError) {
-    return (
-      <div className="flex flex-col justify-center items-center h-64">
-        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
-          </svg>
-        </div>
-        <p className="text-red-600 font-medium mb-2">{loadError}</p>
-        {lastError && (
-          <div className="mb-2 text-xs text-red-400 break-all">Error: {typeof lastError === 'string' ? lastError : JSON.stringify(lastError?.response?.data || lastError, null, 2)}</div>
-        )}
-        <Button variant="outline" onClick={() => { if (!loading && !hasRetried) { setHasRetried(true); loadDashboardData(true); }}} disabled={loading || hasRetried}>
-          {hasRetried ? 'Retrying...' : 'Retry'}
-        </Button>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -370,10 +318,6 @@ const Dashboard: React.FC = () => {
                 Set Up Canvas
               </Button>
             )}
-            {/* Debug info - remove in production */}
-            <div className="mt-2 text-xs text-gray-400">
-              Debug: Token status = {user?.canvasApiToken ? 'Set' : 'Not set'}
-            </div>
           </div>
         )}
       </Card>
