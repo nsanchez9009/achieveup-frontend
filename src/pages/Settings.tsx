@@ -138,7 +138,7 @@ const Settings: React.FC = () => {
             </ol>
             <div className="mt-3 p-2 bg-white rounded border">
               <p className="text-xs font-medium text-gray-700 mb-1">Current Status:</p>
-              {formData.canvasApiToken ? (
+              {user?.canvasApiToken ? (
                 <p className="text-xs text-green-600">
                   ✅ Token is set and ready to use
                 </p>
@@ -258,7 +258,7 @@ const Settings: React.FC = () => {
                 
                 {/* Token Status Indicator */}
                 <div className="mb-2">
-                  {formData.canvasApiToken ? (
+                  {user?.canvasApiToken ? (
                     <div className="flex items-center text-sm text-green-600">
                       <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                       Canvas API Token is set
@@ -275,23 +275,26 @@ const Settings: React.FC = () => {
                   <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     name="canvasApiToken"
-                    type={showToken ? 'text' : 'password'}
-                    value={formData.canvasApiToken}
+                    type="text"
+                    value={showToken ? formData.canvasApiToken : (formData.canvasApiToken ? '••••••••••••••••••••••••••••••••' : '')}
                     onChange={handleChange}
                     placeholder="Paste your Canvas API token"
                     className="pl-10 pr-20"
                     autoComplete="off"
                     data-lpignore="true"
                     data-form-type="other"
+                    readOnly={!showToken && !!formData.canvasApiToken}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowToken(!showToken)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    title={showToken ? "Hide token" : "Show token"}
-                  >
-                    {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  {formData.canvasApiToken && (
+                    <button
+                      type="button"
+                      onClick={() => setShowToken(!showToken)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      title={showToken ? "Hide token" : "Show token"}
+                    >
+                      {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  )}
                 </div>
                 
                 <div className="mt-1 flex items-center justify-between">
@@ -303,6 +306,7 @@ const Settings: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setFormData(prev => ({ ...prev, canvasApiToken: '' }));
+                        setShowToken(false);
                         toast.success('Canvas API Token cleared');
                       }}
                       className="text-xs text-red-600 hover:text-red-800 transition-colors"
@@ -327,6 +331,7 @@ const Settings: React.FC = () => {
                   variant="outline"
                   onClick={() => {
                     setIsEditing(false);
+                    setShowToken(false);
                     // Reset form data to current user data
                     if (user) {
                       setFormData(prev => ({
