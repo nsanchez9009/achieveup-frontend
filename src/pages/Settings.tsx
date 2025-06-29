@@ -10,7 +10,8 @@ import { authAPI } from '../services/api';
 const Settings: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [showToken, setShowToken] = useState(false);
+  const [isEditingCanvasToken, setIsEditingCanvasToken] = useState(false);
+  const [showCanvasToken, setShowCanvasToken] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -92,6 +93,8 @@ const Settings: React.FC = () => {
       } else {
         toast.success('Canvas API Token cleared successfully!');
       }
+      
+      setIsEditingCanvasToken(false);
     } catch (error: any) {
       console.error('Canvas token update failed:', error);
       toast.error(error.response?.data?.message || 'Failed to update Canvas API Token');
@@ -314,61 +317,141 @@ const Settings: React.FC = () => {
                 )}
               </div>
               
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  name="canvasApiToken"
-                  type="text"
-                  value={showToken ? formData.canvasApiToken : (formData.canvasApiToken ? '••••••••••••••••••••••••••••••••' : '')}
-                  onChange={handleChange}
-                  placeholder="Paste your Canvas API token"
-                  className="pl-10 pr-20"
-                  autoComplete="off"
-                  data-lpignore="true"
-                  data-form-type="other"
-                  readOnly={!showToken && !!formData.canvasApiToken}
-                />
-                {formData.canvasApiToken && (
-                  <button
-                    type="button"
-                    onClick={() => setShowToken(!showToken)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    title={showToken ? "Hide token" : "Show token"}
+              {!user?.canvasApiToken ? (
+                // No token set - show input field
+                <div className="relative">
+                  <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    name="canvasApiToken"
+                    type="text"
+                    value={formData.canvasApiToken}
+                    onChange={handleChange}
+                    placeholder="Paste your Canvas API token"
+                    className="pl-10"
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
+                </div>
+              ) : !showCanvasToken ? (
+                // Token is set but hidden - show reveal button
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                  <span className="text-gray-500">••••••••••••••••••••••••••••••••</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCanvasToken(true)}
                   >
-                    {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                )}
-              </div>
+                    <Eye className="w-4 h-4 mr-2" />
+                    Reveal
+                  </Button>
+                </div>
+              ) : !isEditingCanvasToken ? (
+                // Token is revealed but not editing - show token and edit button
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                    <span className="font-mono text-sm break-all">{user.canvasApiToken}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCanvasToken(false)}
+                    >
+                      <EyeOff className="w-4 h-4 mr-2" />
+                      Hide
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditingCanvasToken(true);
+                        setFormData(prev => ({ ...prev, canvasApiToken: user.canvasApiToken || '' }));
+                      }}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Token
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, canvasApiToken: '' }));
+                        setShowCanvasToken(false);
+                        toast.success('Canvas API Token cleared');
+                      }}
+                      className="text-xs text-red-600 hover:text-red-800 transition-colors"
+                    >
+                      Clear Token
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // Editing token - show input field with save/cancel
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      name="canvasApiToken"
+                      type="text"
+                      value={formData.canvasApiToken}
+                      onChange={handleChange}
+                      placeholder="Paste your Canvas API token"
+                      className="pl-10"
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleUpdateCanvasToken}
+                      loading={loading}
+                      disabled={loading}
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Token
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditingCanvasToken(false);
+                        setShowCanvasToken(false);
+                        // Reset form data to current user data
+                        if (user) {
+                          setFormData(prev => ({
+                            ...prev,
+                            canvasApiToken: user.canvasApiToken || ''
+                          }));
+                        }
+                      }}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
               
-              <div className="mt-1 flex items-center justify-between">
+              <div className="mt-1">
                 <p className="text-xs text-gray-500">
                   This connects your account to Canvas for course data.
                 </p>
-                {formData.canvasApiToken && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, canvasApiToken: '' }));
-                      setShowToken(false);
-                      toast.success('Canvas API Token cleared');
-                    }}
-                    className="text-xs text-red-600 hover:text-red-800 transition-colors"
-                  >
-                    Clear Token
-                  </button>
-                )}
               </div>
             </div>
 
-            <Button
-              onClick={handleUpdateCanvasToken}
-              loading={loading}
-              disabled={loading}
-              className="w-full"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Update Canvas Token
-            </Button>
+            {!user?.canvasApiToken && (
+              <Button
+                onClick={handleUpdateCanvasToken}
+                loading={loading}
+                disabled={loading}
+                className="w-full"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Set Canvas Token
+              </Button>
+            )}
 
             {getCanvasTokenInstructions()}
           </div>
