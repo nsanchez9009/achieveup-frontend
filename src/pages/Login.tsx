@@ -2,7 +2,6 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/common/Button';
-import Input from '../components/common/Input';
 import Card from '../components/common/Card';
 import { useForm } from 'react-hook-form';
 
@@ -64,14 +63,19 @@ const Login: React.FC = () => {
                 Email address
               </label>
               <div className="mt-1">
-                <Input
+                <input
                   id="email"
                   type="email"
                   autoComplete="email"
                   placeholder="Enter your email"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold focus:border-transparent transition-colors duration-200 ${
+                    errors.email ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                  }`}
                   {...register('email', { required: 'Email is required' })}
-                  error={errors.email?.message}
                 />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                )}
               </div>
             </div>
 
@@ -80,14 +84,19 @@ const Login: React.FC = () => {
                 Password
               </label>
               <div className="mt-1">
-                <Input
+                <input
                   id="password"
                   type="password"
                   autoComplete="current-password"
                   placeholder="Enter your password"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold focus:border-transparent transition-colors duration-200 ${
+                    errors.password ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                  }`}
                   {...register('password', { required: 'Password is required' })}
-                  error={errors.password?.message}
                 />
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                )}
               </div>
             </div>
 

@@ -3,58 +3,49 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import Input from '../components/common/Input';
 import { Lock, Mail, Eye, EyeOff, Key, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+
+interface SignupFormInputs {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  canvasApiToken: string;
+  canvasTokenType: 'student' | 'instructor';
+}
 
 const Signup: React.FC = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    canvasApiToken: '',
-    canvasTokenType: 'student' as 'student' | 'instructor'
-  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
-      toast.error('Please fill in all required fields');
-      return;
+  
+  const { register, handleSubmit, formState: { errors, isSubmitting }, watch } = useForm<SignupFormInputs>({
+    defaultValues: {
+      canvasTokenType: 'student'
     }
+  });
 
-    if (formData.password !== formData.confirmPassword) {
+  const password = watch('password');
+
+  const onSubmit = async (data: SignupFormInputs) => {
+    if (data.password !== data.confirmPassword) {
       toast.error('Passwords do not match');
       return;
     }
 
-    if (formData.password.length < 6) {
+    if (data.password.length < 6) {
       toast.error('Password must be at least 6 characters long');
       return;
     }
 
-    setLoading(true);
-    const success = await signup(formData);
+    const success = await signup(data);
     
     if (success) {
       navigate('/dashboard');
     }
-    
-    setLoading(false);
   };
 
   const getCanvasTokenInstructions = () => {
@@ -96,20 +87,24 @@ const Signup: React.FC = () => {
         <Card className="p-8">
           {getCanvasTokenInstructions()}
           
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                 Full Name *
               </label>
               <div className="mt-1">
-                <Input
-                  name="name"
+                <input
+                  id="name"
                   type="text"
-                  value={formData.name}
-                  onChange={handleChange}
                   placeholder="Enter your full name"
-                  required
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold focus:border-transparent transition-colors duration-200 ${
+                    errors.name ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                  }`}
+                  {...register('name', { required: 'Full name is required' })}
                 />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                )}
               </div>
             </div>
 
@@ -119,15 +114,24 @@ const Signup: React.FC = () => {
               </label>
               <div className="mt-1 relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  name="email"
+                <input
+                  id="email"
                   type="email"
-                  value={formData.email}
-                  onChange={handleChange}
                   placeholder="your.email@example.com"
-                  className="pl-10"
-                  required
+                  className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold focus:border-transparent transition-colors duration-200 ${
+                    errors.email ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                  }`}
+                  {...register('email', { 
+                    required: 'Email is required',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Invalid email address'
+                    }
+                  })}
                 />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                )}
               </div>
             </div>
 
@@ -137,22 +141,31 @@ const Signup: React.FC = () => {
               </label>
               <div className="mt-1 relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  name="password"
+                <input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={handleChange}
                   placeholder="Create a password"
-                  className="pl-10 pr-10"
-                  required
+                  className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold focus:border-transparent transition-colors duration-200 ${
+                    errors.password ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                  }`}
+                  {...register('password', { 
+                    required: 'Password is required',
+                    minLength: {
+                      value: 6,
+                      message: 'Password must be at least 6 characters'
+                    }
+                  })}
                 />
                 <button
                   type="button"
-                  onClick={(e: React.MouseEvent) => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                )}
               </div>
             </div>
 
@@ -162,22 +175,28 @@ const Signup: React.FC = () => {
               </label>
               <div className="mt-1 relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  name="confirmPassword"
+                <input
+                  id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
                   placeholder="Confirm your password"
-                  className="pl-10 pr-10"
-                  required
+                  className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold focus:border-transparent transition-colors duration-200 ${
+                    errors.confirmPassword ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                  }`}
+                  {...register('confirmPassword', { 
+                    required: 'Please confirm your password',
+                    validate: value => value === password || 'Passwords do not match'
+                  })}
                 />
                 <button
                   type="button"
-                  onClick={(e: React.MouseEvent) => setShowConfirmPassword(!showConfirmPassword)}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+                )}
               </div>
             </div>
 
@@ -187,43 +206,38 @@ const Signup: React.FC = () => {
                 <label className="flex items-center">
                   <input
                     type="radio"
-                    name="canvasTokenType"
                     value="student"
-                    checked={formData.canvasTokenType === 'student'}
-                    onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
                     className="mr-2"
+                    {...register('canvasTokenType')}
                   />
                   <span className="text-sm text-gray-700">Student Token</span>
                 </label>
                 <label className="flex items-center">
                   <input
                     type="radio"
-                    name="canvasTokenType"
                     value="instructor"
-                    checked={formData.canvasTokenType === 'instructor'}
-                    onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
                     className="mr-2"
+                    {...register('canvasTokenType')}
                   />
                   <span className="text-sm text-gray-700">Instructor Token</span>
                 </label>
               </div>
               
               <label htmlFor="canvasApiToken" className="block text-sm font-medium text-gray-700">
-                Canvas API Token
+                Canvas API Token (Optional)
               </label>
               <div className="mt-1 relative">
                 <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  name="canvasApiToken"
+                <input
+                  id="canvasApiToken"
                   type="password"
-                  value={formData.canvasApiToken}
-                  onChange={handleChange}
-                  placeholder="Paste your Canvas API token (optional)"
-                  className="pl-10"
+                  placeholder="Enter your Canvas API token"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold focus:border-transparent transition-colors duration-200"
+                  {...register('canvasApiToken')}
                 />
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                This connects your account to Canvas for course data. You can add this later in settings.
+                You can add this later in your account settings
               </p>
             </div>
 
@@ -231,18 +245,17 @@ const Signup: React.FC = () => {
               <Button
                 type="submit"
                 className="w-full"
-                loading={loading}
-                disabled={loading}
+                disabled={isSubmitting}
               >
-                Create Account
+                {isSubmitting ? 'Creating account...' : 'Create account'}
               </Button>
             </div>
 
             <div className="text-center">
               <p className="text-sm text-gray-600">
                 Already have an account?{' '}
-                <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
-                  Sign in here
+                <Link to="/login" className="font-medium text-ucf-gold hover:text-ucf-gold-dark">
+                  Sign in
                 </Link>
               </p>
             </div>
