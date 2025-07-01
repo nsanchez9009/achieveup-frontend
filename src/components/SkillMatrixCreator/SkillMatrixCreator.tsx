@@ -199,7 +199,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
 
     setLoading(true);
     try {
-      const response = await skillMatrixAPI.createMatrix({
+      const response = await skillMatrixAPI.create({
         course_id: selectedCourse,
         matrix_name: data.matrixName,
         skills: skills.map(skill => skill.name)
@@ -352,7 +352,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                   Skill Name
                 </label>
                 <Input
-                  value={newSkill.name}
+                  value={newSkill.name || ''}
                   onChange={(e) => setNewSkill(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="e.g., JavaScript"
                 />
@@ -408,8 +408,8 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                     type="number"
                     min="1"
                     max="5"
-                    value={newSkill.weight}
-                    onChange={(e) => setNewSkill(prev => ({ ...prev, weight: parseInt(e.target.value) || 1 }))}
+                    value={newSkill.weight?.toString() || ''}
+                    onChange={(e) => setNewSkill(prev => ({ ...prev, weight: e.target.value ? parseInt(e.target.value) : undefined }))}
                     placeholder="1-5"
                   />
                 </div>
