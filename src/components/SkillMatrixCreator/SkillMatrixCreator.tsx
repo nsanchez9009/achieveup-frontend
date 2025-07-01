@@ -50,8 +50,13 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
     register,
     handleSubmit,
     formState: { errors },
-    reset
+    reset,
+    watch
   } = useForm<{ matrixName: string; description?: string }>();
+
+  // Watch form values for debugging
+  const watchedValues = watch();
+  console.log('Current form values:', watchedValues); // Debug log
 
   useEffect(() => {
     loadCourses();
@@ -191,6 +196,11 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   };
 
   const onSubmit = async (data: { matrixName: string; description?: string }) => {
+    console.log('Form submitted with data:', data); // Debug log
+    console.log('Form errors:', errors); // Debug log
+    console.log('Selected course:', selectedCourse); // Debug log
+    console.log('Skills count:', skills.length); // Debug log
+    
     if (!selectedCourse) {
       toast.error('Please select a course');
       return;
@@ -198,6 +208,11 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
 
     if (skills.length === 0) {
       toast.error('Please add at least one skill');
+      return;
+    }
+
+    if (!data.matrixName?.trim()) {
+      toast.error('Matrix name is required');
       return;
     }
 
@@ -503,6 +518,8 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
           <div className="flex justify-end">
             <div className="text-sm text-gray-500 mb-2">
               Debug: Course selected: {selectedCourse ? 'Yes' : 'No'}, Skills count: {skills.length}
+              <br />
+              Matrix name: "{watchedValues.matrixName || 'empty'}" | Errors: {Object.keys(errors).length}
             </div>
             <Button
               type="submit"
