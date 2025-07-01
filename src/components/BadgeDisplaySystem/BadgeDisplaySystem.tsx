@@ -38,10 +38,12 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
     try {
       setLoading(true);
       const response = await badgeAPI.getStudentBadges(studentId);
-      setBadges(response.data);
+      console.log('Badges response:', response.data); // Debug log
+      setBadges(response.data || []);
     } catch (error) {
       console.error('Error loading badges:', error);
       toast.error('Failed to load badges');
+      setBadges([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -50,9 +52,11 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
   const loadCourses = useCallback(async () => {
     try {
       const response = await canvasAPI.getCourses();
-      setCourses(response.data);
+      console.log('Courses response:', response.data); // Debug log
+      setCourses(response.data || []);
     } catch (error) {
       console.error('Error loading courses:', error);
+      setCourses([]); // Set empty array on error
     }
   }, []);
 
@@ -141,6 +145,9 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
       </div>
     );
   }
+
+  // Error boundary for runtime errors
+  try {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -299,6 +306,24 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
       </Card>
     </div>
   );
+  } catch (error) {
+    console.error('Error rendering BadgeDisplaySystem:', error);
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center py-12">
+          <div className="text-red-500 mb-4">
+            <RefreshCw className="w-8 h-8 mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Something went wrong</h3>
+          <p className="text-gray-600 mb-4">There was an error loading the badges page.</p>
+          <Button onClick={() => window.location.reload()}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Reload Page
+          </Button>
+        </div>
+      </div>
+    );
+  }
 };
 
 export default BadgeDisplaySystem;

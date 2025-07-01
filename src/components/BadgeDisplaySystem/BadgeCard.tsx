@@ -4,6 +4,8 @@ import { Badge } from '../../types';
 
 interface BadgeCardProps {
   badge: Badge;
+  onViewDetails?: (badge: Badge) => void;
+  onShare?: (badge: Badge) => void;
 }
 
 const BadgeCard: React.FC<BadgeCardProps> = ({ badge }) => {
