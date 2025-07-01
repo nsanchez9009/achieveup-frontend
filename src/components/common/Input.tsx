@@ -17,15 +17,15 @@ const Input: React.FC<InputProps> = ({
   ...props 
 }) => {
   // Debug logging for react-hook-form registration
-  if (props.name === 'matrixName') {
+  if ((props as any).name === 'matrixName') {
     console.log('Input component received props:', {
-      name: props.name,
-      ref: !!props.ref,
-      onChange: !!props.onChange,
-      onBlur: !!props.onBlur,
-      hasRegisterProps: !!(props.ref && props.onChange && props.onBlur),
+      name: (props as any).name,
+      ref: !!(props as any).ref,
+      onChange: !!(props as any).onChange,
+      onBlur: !!(props as any).onBlur,
+      hasRegisterProps: !!((props as any).ref && (props as any).onChange && (props as any).onBlur),
       value: value,
-      propsValue: props.value
+      propsValue: (props as any).value
     });
   }
 
