@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { Lightbulb, Save, Download, Upload, Search, Zap, Target, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -86,12 +86,32 @@ const SkillAssignmentInterface: React.FC = () => {
   }, [watchedCourse]);
 
   // Load questions when quiz changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const loadQuestions = useCallback(async (quizId: string): Promise<void> => {
+    try {
+      const response = await canvasAPI.getQuestions(quizId);
+      setQuestions(response.data);
+      setSelectedQuiz(quizId);
+      
+      // Initialize question skills
+      const initialSkills: QuestionSkills = {};
+      response.data.forEach((question: CanvasQuestion) => {
+        initialSkills[question.id] = [];
+      });
+      setQuestionSkills(initialSkills);
+      
+      // Analyze questions for skill suggestions
+      analyzeQuestions(response.data);
+    } catch (error) {
+      console.error('Error loading questions:', error);
+      toast.error('Failed to load questions');
+    }
+  }, [selectedCourse]);
+
   useEffect(() => {
     if (watchedQuiz) {
       loadQuestions(watchedQuiz);
     }
-  }, [watchedQuiz]);
+  }, [watchedQuiz, loadQuestions]);
 
   const loadCourses = async (): Promise<void> => {
     try {
@@ -111,27 +131,6 @@ const SkillAssignmentInterface: React.FC = () => {
     } catch (error) {
       console.error('Error loading quizzes:', error);
       toast.error('Failed to load quizzes');
-    }
-  };
-
-  const loadQuestions = async (quizId: string): Promise<void> => {
-    try {
-      const response = await canvasAPI.getQuestions(quizId);
-      setQuestions(response.data);
-      setSelectedQuiz(quizId);
-      
-      // Initialize question skills
-      const initialSkills: QuestionSkills = {};
-      response.data.forEach((question: CanvasQuestion) => {
-        initialSkills[question.id] = [];
-      });
-      setQuestionSkills(initialSkills);
-      
-      // Analyze questions for skill suggestions
-      analyzeQuestions(response.data);
-    } catch (error) {
-      console.error('Error loading questions:', error);
-      toast.error('Failed to load questions');
     }
   };
 

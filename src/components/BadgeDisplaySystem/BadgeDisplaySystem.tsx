@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Award, Plus, RefreshCw, Download, Filter } from 'lucide-react';
 import { badgeAPI, canvasAPI } from '../../services/api';
 import { Badge, CanvasCourse } from '../../types';
@@ -34,13 +34,7 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
   const [selectedCourse, setSelectedCourse] = useState<string>(courseId || '');
   const [showFilters, setShowFilters] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    loadBadges();
-    loadCourses();
-  }, [studentId, selectedCourse]);
-
-  const loadBadges = async () => {
+  const loadBadges = useCallback(async () => {
     try {
       setLoading(true);
       const response = await badgeAPI.getStudentBadges(studentId);
@@ -51,16 +45,21 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId]);
 
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
     try {
       const response = await canvasAPI.getCourses();
       setCourses(response.data);
     } catch (error) {
       console.error('Error loading courses:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadBadges();
+    loadCourses();
+  }, [loadBadges, loadCourses]);
 
   const generateBadges = async () => {
     if (!selectedCourse) {
