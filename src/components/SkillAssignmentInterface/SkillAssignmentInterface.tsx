@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Lightbulb, Save, RefreshCw, Download, Upload, Search, Filter, Zap, Target, BarChart3 } from 'lucide-react';
+import { Lightbulb, Save, RefreshCw, Download, Upload, Search, Filter, Zap, Target, BarChart3, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { skillAssignmentAPI, canvasAPI, questionAnalysisAPI } from '../../services/api';
 import Button from '../common/Button';
