@@ -9,6 +9,21 @@ interface BadgeCardProps {
 }
 
 const BadgeCard: React.FC<BadgeCardProps> = ({ badge }) => {
+  // Add null checking and default values
+  const safeBadge = {
+    id: badge?.id || 'unknown',
+    name: badge?.name || 'Unknown Badge',
+    description: badge?.description || '',
+    skill_name: badge?.skill_name || 'Unknown Skill',
+    level: badge?.level || 'beginner',
+    earned: badge?.earned || false,
+    earned_at: badge?.earned_at || '',
+    progress: badge?.progress || 0,
+    badge_type: badge?.badge_type || '',
+    created_at: badge?.created_at || '',
+    updated_at: badge?.updated_at || ''
+  };
+
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'beginner':
@@ -50,13 +65,13 @@ const BadgeCard: React.FC<BadgeCardProps> = ({ badge }) => {
 
   return (
     <div className={`relative bg-white rounded-lg border-2 transition-all duration-200 hover:shadow-lg ${
-      badge.earned 
+      safeBadge.earned 
         ? 'border-primary-200 shadow-md' 
         : 'border-gray-200 opacity-75'
     }`}>
       {/* Earned Status Badge */}
       <div className="absolute -top-2 -right-2 z-10">
-        {badge.earned ? (
+        {safeBadge.earned ? (
           <div className="bg-green-500 text-white rounded-full p-1">
             <CheckCircle className="w-4 h-4" />
           </div>
@@ -72,55 +87,55 @@ const BadgeCard: React.FC<BadgeCardProps> = ({ badge }) => {
         {/* Badge Icon */}
         <div className="mb-4">
           <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl ${
-            badge.earned ? 'bg-primary-100' : 'bg-gray-100'
+            safeBadge.earned ? 'bg-primary-100' : 'bg-gray-100'
           }`}>
-            {getBadgeIcon(badge.skill_name)}
+            {getBadgeIcon(safeBadge.skill_name)}
           </div>
         </div>
 
         {/* Badge Name */}
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          {badge.name}
+          {safeBadge.name}
         </h3>
 
         {/* Skill Name */}
         <p className="text-sm text-gray-600 mb-3">
-          {badge.skill_name}
+          {safeBadge.skill_name}
         </p>
 
         {/* Description */}
-        {badge.description && (
+        {safeBadge.description && (
           <p className="text-xs text-gray-500 mb-4 line-clamp-2">
-            {badge.description}
+            {safeBadge.description}
           </p>
         )}
 
         {/* Level Badge */}
         <div className="flex items-center justify-center mb-4">
-          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(badge.level)}`}>
-            {getLevelIcon(badge.level)}
-            {badge.level.charAt(0).toUpperCase() + badge.level.slice(1)}
+          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(safeBadge.level)}`}>
+            {getLevelIcon(safeBadge.level)}
+            {safeBadge.level.charAt(0).toUpperCase() + safeBadge.level.slice(1)}
           </span>
         </div>
 
         {/* Earned Date */}
-        {badge.earned && badge.earned_at && (
+        {safeBadge.earned && safeBadge.earned_at && (
           <div className="text-xs text-gray-500">
-            Earned {new Date(badge.earned_at).toLocaleDateString()}
+            Earned {new Date(safeBadge.earned_at).toLocaleDateString()}
           </div>
         )}
 
         {/* Progress Indicator for Unearned Badges */}
-        {!badge.earned && badge.progress && (
+        {!safeBadge.earned && safeBadge.progress !== undefined && (
           <div className="mt-3">
             <div className="flex justify-between text-xs text-gray-500 mb-1">
               <span>Progress</span>
-              <span>{Math.round(badge.progress * 100)}%</span>
+              <span>{Math.round(safeBadge.progress * 100)}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-primary-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${badge.progress * 100}%` }}
+                style={{ width: `${safeBadge.progress * 100}%` }}
               ></div>
             </div>
           </div>

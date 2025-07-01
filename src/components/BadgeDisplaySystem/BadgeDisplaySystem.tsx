@@ -41,7 +41,22 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
       setLoading(true);
       const response = await badgeAPI.getStudentBadges(studentId);
       console.log('Badges response:', response.data); // Debug log
-      setBadges(response.data || []);
+      
+      // Validate and clean badge data
+      const validBadges = (response.data || []).filter(badge => {
+        if (!badge || typeof badge !== 'object') {
+          console.warn('Invalid badge data:', badge);
+          return false;
+        }
+        if (!badge.id || !badge.name || !badge.skill_name) {
+          console.warn('Badge missing required fields:', badge);
+          return false;
+        }
+        return true;
+      });
+      
+      console.log('Valid badges:', validBadges);
+      setBadges(validBadges);
     } catch (error: any) {
       console.error('Error loading badges:', error);
       
@@ -347,7 +362,7 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredBadges.map((badge) => (
+            {filteredBadges.filter(badge => badge && badge.id).map((badge) => (
               <BadgeCard key={badge.id} badge={badge} />
             ))}
           </div>
