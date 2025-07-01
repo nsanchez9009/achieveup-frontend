@@ -23,7 +23,9 @@ const Input: React.FC<InputProps> = ({
       ref: !!props.ref,
       onChange: !!props.onChange,
       onBlur: !!props.onBlur,
-      hasRegisterProps: !!(props.ref && props.onChange && props.onBlur)
+      hasRegisterProps: !!(props.ref && props.onChange && props.onBlur),
+      value: value,
+      propsValue: props.value
     });
   }
 
@@ -42,9 +44,6 @@ const Input: React.FC<InputProps> = ({
             : 'border-gray-300',
           className
         )}
-        value={value}
-        onChange={onChange}
-        onKeyPress={onKeyPress}
         placeholder={placeholder}
         type={type}
         disabled={disabled}
