@@ -181,14 +181,10 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   error?: string;
   helperText?: string;
   className?: string;
-  value?: string;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   placeholder?: string;
   type?: string;
   disabled?: boolean;
   required?: boolean;
-  name?: string;
 }
 
 export interface CardProps {
