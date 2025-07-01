@@ -1,34 +1,48 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Grid, List, Search, Trophy } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { badgeAPI } from '../../services/api';
+import React, { useState, useEffect } from 'react';
+import { Award, Plus, RefreshCw, Download, Filter } from 'lucide-react';
+import { badgeAPI, canvasAPI } from '../../services/api';
+import { Badge, CanvasCourse } from '../../types';
 import BadgeCard from './BadgeCard';
-import Card from '../common/Card';
 import Button from '../common/Button';
-import Input from '../common/Input';
-import { Badge, BadgeFilters } from '../../types';
+import Card from '../common/Card';
+import toast from 'react-hot-toast';
 
 interface BadgeDisplaySystemProps {
-  studentId: string;
+  studentId?: string;
+  courseId?: string;
 }
 
-const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({ studentId }) => {
-  const [badges, setBadges] = useState<Badge[]>([]);
-  const [filteredBadges, setFilteredBadges] = useState<Badge[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [filters, setFilters] = useState<BadgeFilters>({
-    search: '',
-    badgeType: 'all',
-    level: 'all',
-    dateRange: 'all'
-  });
+interface BadgeFilters {
+  skill: string;
+  level: 'all' | 'beginner' | 'intermediate' | 'advanced';
+  earned: 'all' | 'earned' | 'unearned';
+}
 
-  const loadBadges = useCallback(async () => {
+const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({ 
+  studentId = 'current', 
+  courseId 
+}) => {
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [courses, setCourses] = useState<CanvasCourse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [filters, setFilters] = useState<BadgeFilters>({
+    skill: 'all',
+    level: 'all',
+    earned: 'all'
+  });
+  const [selectedCourse, setSelectedCourse] = useState<string>(courseId || '');
+  const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    loadBadges();
+    loadCourses();
+  }, [studentId, selectedCourse]);
+
+  const loadBadges = async () => {
     try {
-      const response = await badgeAPI.getStudentBadges(studentId);
+      setLoading(true);
+      const response = await badgeAPI.getBadges(studentId);
       setBadges(response.data);
     } catch (error) {
       console.error('Error loading badges:', error);
@@ -36,269 +50,255 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({ studentId }) =>
     } finally {
       setLoading(false);
     }
-  }, [studentId]);
-
-  const filterBadges = useCallback(() => {
-    let filtered = [...badges];
-
-    // Search filter
-    if (filters.search) {
-      filtered = filtered.filter(badge =>
-        badge.skill.toLowerCase().includes(filters.search.toLowerCase()) ||
-        badge.badge_type.toLowerCase().includes(filters.search.toLowerCase()) ||
-        badge.description?.toLowerCase().includes(filters.search.toLowerCase())
-      );
-    }
-
-    // Badge type filter
-    if (filters.badgeType !== 'all') {
-      filtered = filtered.filter(badge => badge.badge_type === filters.badgeType);
-    }
-
-    // Level filter
-    if (filters.level !== 'all') {
-      filtered = filtered.filter(badge => badge.level === filters.level);
-    }
-
-    // Date range filter
-    if (filters.dateRange !== 'all') {
-      const now = new Date();
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-
-      filtered = filtered.filter(badge => {
-        const earnedDate = new Date(badge.earned_at);
-        switch (filters.dateRange) {
-          case '30days':
-            return earnedDate >= thirtyDaysAgo;
-          case '90days':
-            return earnedDate >= ninetyDaysAgo;
-          default:
-            return true;
-        }
-      });
-    }
-
-    setFilteredBadges(filtered);
-  }, [badges, filters]);
-
-  useEffect(() => {
-    loadBadges();
-  }, [loadBadges]);
-
-  useEffect(() => {
-    filterBadges();
-  }, [filterBadges]);
-
-  const handleViewDetails = (badge: Badge) => {
-    setSelectedBadge(badge);
-    setShowModal(true);
   };
 
-  const handleShare = async (badge: Badge) => {
+  const loadCourses = async () => {
     try {
-      const shareText = `I earned the ${badge.badge_type.replace('_', ' ')} badge for ${badge.skill} at ${badge.level} level!`;
-      
-      if (navigator.share) {
-        await navigator.share({
-          title: 'AchieveUp Badge',
-          text: shareText,
-          url: window.location.href
-        });
-      } else {
-        await navigator.clipboard.writeText(shareText);
-        toast.success('Badge details copied to clipboard!');
-      }
+      const response = await canvasAPI.getCourses();
+      setCourses(response.data);
     } catch (error) {
-      console.error('Error sharing badge:', error);
-      toast.error('Failed to share badge');
+      console.error('Error loading courses:', error);
     }
   };
 
-  const getBadgeStats = () => {
-    const total = badges.length;
-    const byType = badges.reduce((acc, badge) => {
-      acc[badge.badge_type] = (acc[badge.badge_type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    const byLevel = badges.reduce((acc, badge) => {
-      acc[badge.level] = (acc[badge.level] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  const generateBadges = async () => {
+    if (!selectedCourse) {
+      toast.error('Please select a course first');
+      return;
+    }
 
-    return { total, byType, byLevel };
+    setGenerating(true);
+    try {
+      // Generate badges based on skill levels
+      const skillLevels = {
+        'JavaScript': 'intermediate',
+        'React': 'beginner',
+        'TypeScript': 'advanced',
+        'HTML': 'beginner',
+        'CSS': 'beginner',
+        'Node.js': 'intermediate'
+      };
+
+      const response = await badgeAPI.generateBadges({
+        student_id: studentId,
+        course_id: selectedCourse,
+        skill_levels: skillLevels
+      });
+
+      setBadges(response.data);
+      toast.success('Badges generated successfully!');
+    } catch (error) {
+      console.error('Error generating badges:', error);
+      toast.error('Failed to generate badges');
+    } finally {
+      setGenerating(false);
+    }
   };
 
-  const stats = getBadgeStats();
+  const exportBadges = () => {
+    const filteredBadges = getFilteredBadges();
+    const dataStr = JSON.stringify(filteredBadges, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `badges-${studentId}-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Badges exported successfully!');
+  };
+
+  const getFilteredBadges = () => {
+    return badges.filter(badge => {
+      if (filters.skill !== 'all' && badge.skill_name !== filters.skill) return false;
+      if (filters.level !== 'all' && badge.level !== filters.level) return false;
+      if (filters.earned !== 'all') {
+        const isEarned = badge.earned || false;
+        if (filters.earned === 'earned' && !isEarned) return false;
+        if (filters.earned === 'unearned' && isEarned) return false;
+      }
+      return true;
+    });
+  };
+
+  const getUniqueSkills = () => {
+    const skills = badges.map(badge => badge.skill_name);
+    return ['all', ...Array.from(new Set(skills))];
+  };
+
+  const getEarnedCount = () => badges.filter(badge => badge.earned).length;
+  const getTotalCount = () => badges.length;
+
+  const filteredBadges = getFilteredBadges();
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center py-12">
+          <RefreshCw className="w-8 h-8 text-gray-400 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading badges...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Badges</h1>
-        <p className="text-gray-600">Track your achievements and skill mastery</p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="text-center">
-          <div className="text-2xl font-bold text-primary-600">{stats.total}</div>
-          <div className="text-sm text-gray-600">Total Badges</div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-2xl font-bold text-yellow-600">{stats.byType.skill_master || 0}</div>
-          <div className="text-sm text-gray-600">Skill Master</div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-2xl font-bold text-blue-600">{stats.byType.consistent_learner || 0}</div>
-          <div className="text-sm text-gray-600">Consistent Learner</div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-2xl font-bold text-green-600">{stats.byLevel.advanced || 0}</div>
-          <div className="text-sm text-gray-600">Advanced Level</div>
-        </Card>
-      </div>
-
-      {/* Filters and Controls */}
-      <Card className="mb-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-          {/* Search */}
-          <div className="flex-1 max-w-md">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search badges..."
-                value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="flex gap-2">
-            <select
-              value={filters.badgeType}
-              onChange={(e) => setFilters(prev => ({ ...prev, badgeType: e.target.value }))}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="all">All Types</option>
-              <option value="skill_master">Skill Master</option>
-              <option value="consistent_learner">Consistent Learner</option>
-              <option value="quick_learner">Quick Learner</option>
-              <option value="persistent">Persistent</option>
-            </select>
-
-            <select
-              value={filters.level}
-              onChange={(e) => setFilters(prev => ({ ...prev, level: e.target.value }))}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="all">All Levels</option>
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-            </select>
-
-            <select
-              value={filters.dateRange}
-              onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value }))}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="all">All Time</option>
-              <option value="30days">Last 30 Days</option>
-              <option value="90days">Last 90 Days</option>
-            </select>
-          </div>
-
-          {/* View Mode Toggle */}
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-            <Button
-              variant={viewMode === 'grid' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-            >
-              <Grid className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-            >
-              <List className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Badges Display */}
-      {filteredBadges.length === 0 ? (
-        <Card className="text-center py-12">
-          <div className="text-gray-500">
-            <Trophy className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-lg font-medium mb-2">No badges found</h3>
-            <p>Try adjusting your filters or complete more assessments to earn badges!</p>
-          </div>
-        </Card>
-      ) : (
-        <div className={viewMode === 'grid' 
-          ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-          : 'space-y-4'
-        }>
-          {filteredBadges.map((badge) => (
-            <BadgeCard
-              key={badge._id}
-              badge={badge}
-              onViewDetails={handleViewDetails}
-              onShare={handleShare}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Badge Detail Modal */}
-      {showModal && selectedBadge && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <Card
+        title="Badge Display System"
+        subtitle="View and manage earned badges for skill mastery"
+      >
+        {/* Header with stats and actions */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="flex items-center gap-6">
             <div className="text-center">
-              <h3 className="text-xl font-semibold mb-4">
-                {selectedBadge.badge_type.replace('_', ' ')}
-              </h3>
-              <p className="text-gray-600 mb-4">{selectedBadge.description}</p>
-              <div className="space-y-2 text-sm">
-                <p><strong>Skill:</strong> {selectedBadge.skill}</p>
-                <p><strong>Level:</strong> {selectedBadge.level}</p>
-                <p><strong>Earned:</strong> {new Date(selectedBadge.earned_at).toLocaleDateString()}</p>
+              <div className="text-2xl font-bold text-primary-600">{getEarnedCount()}</div>
+              <div className="text-sm text-gray-600">Earned</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-600">{getTotalCount()}</div>
+              <div className="text-sm text-gray-600">Total</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {getTotalCount() > 0 ? Math.round((getEarnedCount() / getTotalCount()) * 100) : 0}%
               </div>
-              <div className="flex gap-2 mt-6">
-                <Button
-                  onClick={() => handleShare(selectedBadge)}
-                  className="flex-1"
+              <div className="text-sm text-gray-600">Completion</div>
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportBadges}
+              disabled={filteredBadges.length === 0}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+            <Button
+              size="sm"
+              onClick={generateBadges}
+              loading={generating}
+              disabled={!selectedCourse}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Generate Badges
+            </Button>
+          </div>
+        </div>
+
+        {/* Course Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select Course for Badge Generation
+          </label>
+          <select
+            value={selectedCourse}
+            onChange={(e) => setSelectedCourse(e.target.value)}
+            className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">Select a course</option>
+            {courses.map(course => (
+              <option key={course.id} value={course.id}>
+                {course.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Filters */}
+        {showFilters && (
+          <div className="bg-gray-50 p-4 rounded-lg mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Skill
+                </label>
+                <select
+                  value={filters.skill}
+                  onChange={(e) => setFilters(prev => ({ ...prev, skill: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  Share Badge
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1"
+                  {getUniqueSkills().map(skill => (
+                    <option key={skill} value={skill}>
+                      {skill === 'all' ? 'All Skills' : skill}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Level
+                </label>
+                <select
+                  value={filters.level}
+                  onChange={(e) => setFilters(prev => ({ ...prev, level: e.target.value as any }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  Close
-                </Button>
+                  <option value="all">All Levels</option>
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={filters.earned}
+                  onChange={(e) => setFilters(prev => ({ ...prev, earned: e.target.value as any }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="all">All Badges</option>
+                  <option value="earned">Earned Only</option>
+                  <option value="unearned">Unearned Only</option>
+                </select>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Badges Grid */}
+        {filteredBadges.length === 0 ? (
+          <div className="text-center py-12">
+            <Award className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No badges found</h3>
+            <p className="text-gray-600 mb-4">
+              {badges.length === 0 
+                ? "No badges have been generated yet. Select a course and generate badges to get started."
+                : "No badges match the current filters. Try adjusting your filter criteria."
+              }
+            </p>
+            {badges.length === 0 && (
+              <Button onClick={generateBadges} disabled={!selectedCourse}>
+                <Plus className="w-4 h-4 mr-2" />
+                Generate First Badges
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredBadges.map((badge) => (
+              <BadgeCard key={badge.id} badge={badge} />
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   );
 };
 
-export default BadgeDisplaySystem; 
+export default BadgeDisplaySystem;

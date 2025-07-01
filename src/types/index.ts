@@ -53,14 +53,17 @@ export interface SkillSuggestionRequest {
 
 // Badge Types
 export interface Badge {
-  _id: string;
-  student_id: string;
-  course_id: string;
-  skill: string;
-  badge_type: 'skill_master' | 'consistent_learner' | 'quick_learner' | 'persistent';
-  description: string;
-  earned_at: string;
+  id: string;
+  name: string;
+  description?: string;
+  skill_name: string;
   level: 'beginner' | 'intermediate' | 'advanced';
+  earned?: boolean;
+  earned_at?: string;
+  progress?: number; // 0-1 progress towards earning the badge
+  badge_type?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface GenerateBadgeRequest {
@@ -214,10 +217,9 @@ export interface SkillAssignmentFormData {
 
 // Filter Types
 export interface BadgeFilters {
-  search: string;
-  badgeType: string;
-  level: string;
-  dateRange: string;
+  skill: string;
+  level: 'all' | 'beginner' | 'intermediate' | 'advanced';
+  earned: 'all' | 'earned' | 'unearned';
 }
 
 export interface AnalyticsFilters {
