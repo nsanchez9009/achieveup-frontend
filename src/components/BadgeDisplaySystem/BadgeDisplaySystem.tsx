@@ -42,7 +42,7 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
   const loadBadges = async () => {
     try {
       setLoading(true);
-      const response = await badgeAPI.getBadges(studentId);
+      const response = await badgeAPI.getStudentBadges(studentId);
       setBadges(response.data);
     } catch (error) {
       console.error('Error loading badges:', error);
@@ -70,7 +70,7 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
     setGenerating(true);
     try {
       // Generate badges based on skill levels
-      const skillLevels = {
+      const skillLevels: { [skillName: string]: 'beginner' | 'intermediate' | 'advanced' } = {
         'JavaScript': 'intermediate',
         'React': 'beginner',
         'TypeScript': 'advanced',
@@ -79,7 +79,7 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
         'Node.js': 'intermediate'
       };
 
-      const response = await badgeAPI.generateBadges({
+      const response = await badgeAPI.generate({
         student_id: studentId,
         course_id: selectedCourse,
         skill_levels: skillLevels
