@@ -16,6 +16,17 @@ const Input: React.FC<InputProps> = ({
   required = false,
   ...props 
 }) => {
+  // Debug logging for react-hook-form registration
+  if (props.name === 'matrixName') {
+    console.log('Input component received props:', {
+      name: props.name,
+      ref: !!props.ref,
+      onChange: !!props.onChange,
+      onBlur: !!props.onBlur,
+      hasRegisterProps: !!(props.ref && props.onChange && props.onBlur)
+    });
+  }
+
   return (
     <div className="w-full">
       {label && (
