@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Award, Plus, RefreshCw, Download, Filter } from 'lucide-react';
+import { Award, Plus, RefreshCw, Download, Filter, LogIn } from 'lucide-react';
 import { badgeAPI, canvasAPI } from '../../services/api';
 import { Badge, CanvasCourse } from '../../types';
 import BadgeCard from './BadgeCard';
 import Button from '../common/Button';
 import Card from '../common/Card';
+import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 interface BadgeDisplaySystemProps {
@@ -22,6 +23,7 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
   studentId = 'current', 
   courseId 
 }) => {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [badges, setBadges] = useState<Badge[]>([]);
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,10 +42,20 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
       const response = await badgeAPI.getStudentBadges(studentId);
       console.log('Badges response:', response.data); // Debug log
       setBadges(response.data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading badges:', error);
-      toast.error('Failed to load badges');
-      setBadges([]); // Set empty array on error
+      
+      // Handle specific error cases
+      if (error.response?.status === 401) {
+        toast.error('Please log in to view badges');
+        setBadges([]);
+      } else if (error.response?.status === 404) {
+        toast.error('No badges found for this user');
+        setBadges([]);
+      } else {
+        toast.error('Failed to load badges. Please try again.');
+        setBadges([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -54,9 +66,17 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
       const response = await canvasAPI.getCourses();
       console.log('Courses response:', response.data); // Debug log
       setCourses(response.data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading courses:', error);
-      setCourses([]); // Set empty array on error
+      
+      // Handle specific error cases
+      if (error.response?.status === 401) {
+        console.log('User not authenticated for courses');
+        setCourses([]);
+      } else {
+        console.log('Other error loading courses:', error.message);
+        setCourses([]);
+      }
     }
   }, []);
 
@@ -134,6 +154,35 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
   const getTotalCount = () => badges.length;
 
   const filteredBadges = getFilteredBadges();
+
+  // Show loading while auth is being checked
+  if (authLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center py-12">
+          <RefreshCw className="w-8 h-8 text-gray-400 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center py-12">
+          <LogIn className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Authentication Required</h3>
+          <p className="text-gray-600 mb-4">Please log in to view your badges.</p>
+          <Button onClick={() => window.location.href = '/login'}>
+            <LogIn className="w-4 h-4 mr-2" />
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
