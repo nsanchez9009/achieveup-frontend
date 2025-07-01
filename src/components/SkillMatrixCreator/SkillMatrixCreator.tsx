@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 import { skillMatrixAPI, canvasAPI } from '../../services/api';
 import { SkillMatrix, CanvasCourse } from '../../types';
 import Button from '../common/Button';
-import Input from '../common/Input';
 import Card from '../common/Card';
 
 interface SkillMatrixCreatorProps {
@@ -279,19 +278,27 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Matrix Name
               </label>
-              <Input
-                {...register('matrixName', { required: 'Matrix name is required' })}
+              <input
+                type="text"
                 placeholder="e.g., Web Development Skills"
-                error={errors.matrixName?.message}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                  errors.matrixName ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                }`}
+                {...register('matrixName', { required: 'Matrix name is required' })}
               />
+              {errors.matrixName && (
+                <p className="mt-1 text-sm text-red-600">{errors.matrixName.message}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Description (Optional)
               </label>
-              <Input
-                {...register('description')}
+              <input
+                type="text"
                 placeholder="Brief description of the skill matrix"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                {...register('description')}
               />
             </div>
           </div>
@@ -370,11 +377,13 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Skill Name
                 </label>
-                <Input
-                  value={newSkill.name || ''}
-                  onChange={(e) => setNewSkill(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., JavaScript"
-                />
+                              <input
+                type="text"
+                value={newSkill.name || ''}
+                onChange={(e) => setNewSkill(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., JavaScript"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -394,10 +403,12 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Category
                 </label>
-                <Input
+                <input
+                  type="text"
                   value={newSkill.category}
                   onChange={(e) => setNewSkill(prev => ({ ...prev, category: e.target.value }))}
                   placeholder="e.g., Frontend"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div className="flex items-end">
@@ -413,23 +424,26 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Description
                   </label>
-                  <Input
+                  <input
+                    type="text"
                     value={newSkill.description}
                     onChange={(e) => setNewSkill(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Skill description"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Weight
                   </label>
-                  <Input
+                  <input
                     type="number"
                     min="1"
                     max="5"
                     value={newSkill.weight?.toString() || ''}
                     onChange={(e) => setNewSkill(prev => ({ ...prev, weight: e.target.value ? parseInt(e.target.value) : undefined }))}
                     placeholder="1-5"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
               </div>
