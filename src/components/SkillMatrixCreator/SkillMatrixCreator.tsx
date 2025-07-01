@@ -116,14 +116,18 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       return;
     }
 
-    setSkills(prev => [...prev, {
+    const skillToAdd = {
       name: newSkill.name!,
       description: newSkill.description || '',
       level: newSkill.level || 'beginner',
-      category: newSkill.category || 'General',
+      category: newSkill.category?.trim() || 'General',
       weight: newSkill.weight || 1,
       dependencies: newSkill.dependencies || []
-    }]);
+    };
+
+    console.log('Adding skill:', skillToAdd); // Debug log
+
+    setSkills(prev => [...prev, skillToAdd]);
 
     setNewSkill({
       name: '',
@@ -218,13 +222,13 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   };
 
   const getSkillCategories = () => {
-    const categories = skills.map(skill => skill.category).filter((category): category is string => Boolean(category));
+    const categories = skills.map(skill => skill.category || 'General').filter((category): category is string => Boolean(category));
     return ['All', ...Array.from(new Set(categories))];
   };
 
   const getSkillsByCategory = (category: string) => {
     if (category === 'All') return skills;
-    return skills.filter(skill => skill.category === category);
+    return skills.filter(skill => (skill.category || 'General') === category);
   };
 
   return (
@@ -437,57 +441,69 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
               </div>
             ) : (
               <div className="space-y-2">
-                {getSkillCategories().map(category => {
-                  const categorySkills = getSkillsByCategory(category);
-                  if (categorySkills.length === 0) return null;
+                {(() => {
+                  const categories = getSkillCategories();
+                  console.log('Categories:', categories); // Debug log
+                  console.log('All skills:', skills); // Debug log
                   
-                  return (
-                    <div key={category} className="bg-white border rounded-lg">
-                      <div className="px-4 py-2 bg-gray-50 border-b">
-                        <h4 className="font-medium text-gray-700">{category}</h4>
-                      </div>
-                      <div className="p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {categorySkills.map((skill, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                              <div className="flex-1">
-                                <div className="font-medium text-gray-900">{skill.name}</div>
-                                <div className="text-sm text-gray-600">{skill.description}</div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    skill.level === 'beginner' ? 'bg-green-100 text-green-800' :
-                                    skill.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
-                                  }`}>
-                                    {skill.level}
-                                  </span>
-                                  {skill.weight && skill.weight > 1 && (
-                                    <span className="text-xs text-gray-500">Weight: {skill.weight}</span>
-                                  )}
+                  return categories.map(category => {
+                    const categorySkills = getSkillsByCategory(category);
+                    console.log(`Skills for category "${category}":`, categorySkills); // Debug log
+                    
+                    if (categorySkills.length === 0) return null;
+                    
+                    return (
+                      <div key={category} className="bg-white border rounded-lg">
+                        <div className="px-4 py-2 bg-gray-50 border-b">
+                          <h4 className="font-medium text-gray-700">{category} ({categorySkills.length} skills)</h4>
+                        </div>
+                        <div className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {categorySkills.map((skill, index) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="flex-1">
+                                  <div className="font-medium text-gray-900">{skill.name}</div>
+                                  <div className="text-sm text-gray-600">{skill.description}</div>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      skill.level === 'beginner' ? 'bg-green-100 text-green-800' :
+                                      skill.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-red-100 text-red-800'
+                                    }`}>
+                                      {skill.level}
+                                    </span>
+                                    <span className="text-xs text-gray-500">Category: {skill.category || 'General'}</span>
+                                    {skill.weight && skill.weight > 1 && (
+                                      <span className="text-xs text-gray-500">Weight: {skill.weight}</span>
+                                    )}
+                                  </div>
                                 </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeSkill(skills.indexOf(skill))}
+                                  className="ml-2"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </div>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeSkill(skills.indexOf(skill))}
-                                className="ml-2"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             )}
           </div>
 
           {/* Submit Button */}
           <div className="flex justify-end">
+            <div className="text-sm text-gray-500 mb-2">
+              Debug: Course selected: {selectedCourse ? 'Yes' : 'No'}, Skills count: {skills.length}
+            </div>
             <Button
               type="submit"
               loading={loading}
