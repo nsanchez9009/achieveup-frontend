@@ -218,7 +218,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   };
 
   const getSkillCategories = () => {
-    const categories = skills.map(skill => skill.category).filter(Boolean);
+    const categories = skills.map(skill => skill.category).filter((category): category is string => Boolean(category));
     return ['All', ...Array.from(new Set(categories))];
   };
 
