@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Trash2, Save, Download, Upload, Copy, Settings, Layers, Target } from 'lucide-react';
+import { Plus, Trash2, Save, Download, Upload, Settings, Layers, Target } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { skillMatrixAPI, canvasAPI } from '../../services/api';
 import { SkillMatrix, CanvasCourse } from '../../types';

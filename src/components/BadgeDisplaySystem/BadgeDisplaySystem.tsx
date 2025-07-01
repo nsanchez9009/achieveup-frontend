@@ -34,6 +34,7 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
   const [selectedCourse, setSelectedCourse] = useState<string>(courseId || '');
   const [showFilters, setShowFilters] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadBadges();
     loadCourses();

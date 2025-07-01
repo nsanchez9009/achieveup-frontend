@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, CheckCircle, Clock, Star } from 'lucide-react';
+import { CheckCircle, Clock, Star } from 'lucide-react';
 import { Badge } from '../../types';
 
 interface BadgeCardProps {

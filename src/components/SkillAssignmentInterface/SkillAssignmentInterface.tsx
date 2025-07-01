@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Lightbulb, Save, RefreshCw, Download, Upload, Search, Filter, Zap, Target, BarChart3, Settings } from 'lucide-react';
+import { Lightbulb, Save, Download, Upload, Search, Zap, Target, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { skillAssignmentAPI, canvasAPI, questionAnalysisAPI } from '../../services/api';
 import Button from '../common/Button';
@@ -54,7 +54,7 @@ const SkillAssignmentInterface: React.FC = () => {
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [selectedQuiz, setSelectedQuiz] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  const [suggestionsLoading, setSuggestionsLoading] = useState<boolean>(false);
+
   const [questionSkills, setQuestionSkills] = useState<QuestionSkills>({});
   const [suggestions, setSuggestions] = useState<Suggestions>({});
   const [questionAnalysis, setQuestionAnalysis] = useState<QuestionAnalysis[]>([]);
@@ -86,6 +86,7 @@ const SkillAssignmentInterface: React.FC = () => {
   }, [watchedCourse]);
 
   // Load questions when quiz changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (watchedQuiz) {
       loadQuestions(watchedQuiz);
@@ -187,7 +188,6 @@ const SkillAssignmentInterface: React.FC = () => {
   };
 
   const getSkillSuggestions = async (questionId: string, questionText: string): Promise<string[]> => {
-    setSuggestionsLoading(true);
     try {
       const response = await skillAssignmentAPI.suggest({
         question_text: questionText,
@@ -204,8 +204,6 @@ const SkillAssignmentInterface: React.FC = () => {
       console.error('Error getting suggestions:', error);
       toast.error('Failed to get skill suggestions');
       return [];
-    } finally {
-      setSuggestionsLoading(false);
     }
   };
 
