@@ -19,6 +19,7 @@ const Settings: React.FC = () => {
     name: '',
     email: '',
     canvasApiToken: '',
+    canvasTokenType: 'student' as 'student' | 'instructor',
     currentPassword: '',
     newPassword: '',
     confirmNewPassword: ''
@@ -30,7 +31,8 @@ const Settings: React.FC = () => {
         ...prev,
         name: user.name || '',
         email: user.email || '',
-        canvasApiToken: ''
+        canvasApiToken: '',
+        canvasTokenType: user.canvasTokenType || 'student'
       }));
     }
   }, [user]);
@@ -63,15 +65,18 @@ const Settings: React.FC = () => {
   };
 
   // Validate Canvas API token
-  const handleValidateToken = async (token: string) => {
+  const handleValidateToken = async (token: string, tokenType: 'student' | 'instructor') => {
     setValidatingToken(true);
     try {
-      const response = await authAPI.validateCanvasToken({ canvasApiToken: token });
+      const response = await authAPI.validateCanvasToken({ 
+        canvasApiToken: token,
+        canvasTokenType: tokenType 
+      });
       if (response.data.valid) {
-        toast.success('Canvas API token is valid!');
+        toast.success(`Canvas API ${tokenType} token is valid!`);
         return true;
       } else {
-        toast.error(response.data.message || 'Invalid Canvas API token');
+        toast.error(response.data.message || `Invalid Canvas API ${tokenType} token`);
         return false;
       }
     } catch (error: any) {
@@ -112,7 +117,7 @@ const Settings: React.FC = () => {
     setLoading(true);
     try {
       // First validate the token
-      const isValid = await handleValidateToken(formData.canvasApiToken);
+      const isValid = await handleValidateToken(formData.canvasApiToken, formData.canvasTokenType);
       if (!isValid) {
         setLoading(false);
         return;
@@ -122,10 +127,11 @@ const Settings: React.FC = () => {
       await authAPI.updateProfile({
         name: user?.name || '',
         email: user?.email || '',
-        canvasApiToken: formData.canvasApiToken
+        canvasApiToken: formData.canvasApiToken,
+        canvasTokenType: formData.canvasTokenType
       });
       await refreshUser();
-      toast.success('Canvas API Token updated successfully!');
+      toast.success(`Canvas API ${formData.canvasTokenType} token updated successfully!`);
       setIsEditingToken(false);
       setFormData(prev => ({ ...prev, canvasApiToken: '' }));
     } catch (error: any) {
@@ -193,21 +199,41 @@ const Settings: React.FC = () => {
       <div className="flex items-start">
         <Info className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
         <div className="text-sm text-blue-800">
-          <p className="font-medium mb-2">How to get your Canvas API Token:</p>
+          <p className="font-medium mb-2">
+            How to get your Canvas API {formData.canvasTokenType === 'instructor' ? 'Instructor' : 'Student'} Token:
+          </p>
           <ol className="list-decimal list-inside space-y-1">
             <li>Log into your Canvas account</li>
             <li>Go to Account → Settings</li>
             <li>Scroll down to "Approved Integrations"</li>
             <li>Click "New Access Token"</li>
-            <li>Give it a name (e.g., "AchieveUp")</li>
+            <li>Give it a name (e.g., "AchieveUp {formData.canvasTokenType === 'instructor' ? 'Instructor' : 'Student'}")</li>
             <li>Copy the generated token and paste it above</li>
           </ol>
+          
+          {formData.canvasTokenType === 'instructor' && (
+            <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+              <p className="text-xs font-medium text-yellow-800 mb-1">Instructor Token Benefits:</p>
+              <ul className="text-xs text-yellow-700 space-y-1">
+                <li>• Access to all courses you teach</li>
+                <li>• View and manage quiz questions</li>
+                <li>• Monitor student progress across courses</li>
+                <li>• Create and manage skill matrices</li>
+                <li>• Access detailed analytics and reports</li>
+              </ul>
+            </div>
+          )}
+          
           <div className="mt-3 p-2 bg-white rounded border">
             <p className="text-xs font-medium text-gray-700 mb-1">Current Status:</p>
             {user?.hasCanvasToken ? (
-              <p className="text-xs text-green-600">✅ Token is set and ready to use</p>
+              <p className="text-xs text-green-600">
+                ✅ {user.canvasTokenType === 'instructor' ? 'Instructor' : 'Student'} token is set and ready to use
+              </p>
             ) : (
-              <p className="text-xs text-orange-600">⚠️ No token set - courses won't load until you add one</p>
+              <p className="text-xs text-orange-600">
+                ⚠️ No token set - {formData.canvasTokenType === 'instructor' ? 'instructor features' : 'courses'} won't load until you add one
+              </p>
             )}
           </div>
           <p className="mt-2 text-xs">
@@ -329,6 +355,35 @@ const Settings: React.FC = () => {
             {!user?.hasCanvasToken ? (
               // No token set - show input field
               <form onSubmit={handleUpdateToken} className="space-y-3">
+                {/* Token Type Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Token Type</label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="canvasTokenType"
+                        value="student"
+                        checked={formData.canvasTokenType === 'student'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">Student Token</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="canvasTokenType"
+                        value="instructor"
+                        checked={formData.canvasTokenType === 'instructor'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">Instructor Token</span>
+                    </label>
+                  </div>
+                </div>
+                
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
@@ -354,6 +409,35 @@ const Settings: React.FC = () => {
             ) : isEditingToken ? (
               // Editing token - show input field
               <form onSubmit={handleUpdateToken} className="space-y-3">
+                {/* Token Type Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Token Type</label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="canvasTokenType"
+                        value="student"
+                        checked={formData.canvasTokenType === 'student'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">Student Token</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="canvasTokenType"
+                        value="instructor"
+                        checked={formData.canvasTokenType === 'instructor'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">Instructor Token</span>
+                    </label>
+                  </div>
+                </div>
+                
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
@@ -381,8 +465,12 @@ const Settings: React.FC = () => {
               // Token is set - show management options
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                  <span className="text-gray-500">••••••••••••••••••••••••••••••••</span>
-                  <span className="text-xs text-gray-400">Token stored securely</span>
+                  <div>
+                    <span className="text-gray-500">••••••••••••••••••••••••••••••••</span>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {user.canvasTokenType === 'instructor' ? 'Instructor Token' : 'Student Token'} - stored securely
+                    </p>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setIsEditingToken(true)}>

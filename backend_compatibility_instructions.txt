@@ -8,6 +8,7 @@ CURRENT STATUS:
 ✅ Integration: ALL AchieveUp endpoints implemented and working
 ✅ Testing: All endpoints responding correctly (401 for invalid tokens, 400 for validation)
 ⚠️ Canvas API Token: Frontend UI ready, backend needs enhanced token validation
+⚠️ Instructor Tokens: Frontend UI ready, backend needs instructor token support
 
 BACKEND STATUS:
 ==============
@@ -21,6 +22,7 @@ BACKEND STATUS:
 ✅ CORS configured for frontend domains
 ✅ Production ready on Heroku
 ⚠️ Canvas API token validation and security needs enhancement
+⚠️ Instructor token support needs implementation
 
 REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
 =======================================
@@ -29,9 +31,10 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    ===========================
    
    POST /auth/signup ✅
-   - Request: { name: string, email: string, password: string, canvasApiToken?: string }
+   - Request: { name: string, email: string, password: string, canvasApiToken?: string, canvasTokenType?: 'student' | 'instructor' }
    - Response: { token: string, user: User }
    - Note: canvasApiToken should be validated with Canvas API before storing
+   - Note: canvasTokenType determines user permissions and access level
    
    POST /auth/login ✅
    - Request: { email: string, password: string }
@@ -47,10 +50,11 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    
    PUT /auth/profile ✅
    - Headers: Authorization: Bearer <token>
-   - Request: { name: string, email: string, canvasApiToken?: string }
+   - Request: { name: string, email: string, canvasApiToken?: string, canvasTokenType?: 'student' | 'instructor' }
    - Response: { user: User }
    - IMPORTANT: Response includes updated user object with canvasApiToken field
    - SECURITY: Validate canvasApiToken with Canvas API before storing
+   - NOTE: canvasTokenType determines token validation approach
    
    PUT /auth/password ✅
    - Headers: Authorization: Bearer <token>
@@ -65,31 +69,63 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    - Response: CanvasCourse[]
    - Note: Critical for dashboard functionality
    - Note: Uses stored canvasApiToken from user profile
+   - Note: Instructor tokens can access all courses they teach
    
    GET /canvas/courses/{courseId}/quizzes ✅
    - Headers: Authorization: Bearer <token>
    - Response: CanvasQuiz[]
+   - Note: Instructor tokens can access all quizzes in their courses
    
    GET /canvas/quizzes/{quizId}/questions ✅
    - Headers: Authorization: Bearer <token>
    - Response: CanvasQuestion[]
+   - Note: Instructor tokens can access all questions in their quizzes
 
 3. NEW CANVAS TOKEN VALIDATION ENDPOINTS (NEEDED ⚠️):
    ===================================================
    
    POST /auth/validate-canvas-token ⚠️
-   - Request: { canvasApiToken: string }
-   - Response: { valid: boolean, message?: string }
+   - Request: { canvasApiToken: string, canvasTokenType: 'student' | 'instructor' }
+   - Response: { valid: boolean, message?: string, user_info?: object, permissions?: object }
    - Purpose: Validate token with Canvas API before storing
    - Implementation: Call Canvas API /users/self endpoint
+   - Note: Different validation logic for student vs instructor tokens
    
    GET /canvas/test-connection ⚠️
    - Headers: Authorization: Bearer <token>
-   - Response: { connected: boolean, message?: string }
+   - Response: { connected: boolean, message?: string, user_info?: object }
    - Purpose: Test if stored token is still valid
    - Implementation: Test Canvas API connection using stored token
 
-4. ACHIEVEUP CORE ENDPOINTS ✅:
+4. INSTRUCTOR-SPECIFIC ENDPOINTS (NEEDED ⚠️):
+   ===========================================
+   
+   GET /canvas/instructor/courses ⚠️
+   - Headers: Authorization: Bearer <token>
+   - Response: CanvasCourse[] (all courses user teaches)
+   - Purpose: Get all courses for instructor token
+   
+   GET /canvas/instructor/courses/{courseId}/quizzes ⚠️
+   - Headers: Authorization: Bearer <token>
+   - Response: CanvasQuiz[] (all quizzes in course)
+   - Purpose: Get all quizzes for instructor management
+   
+   GET /canvas/instructor/quizzes/{quizId}/questions ⚠️
+   - Headers: Authorization: Bearer <token>
+   - Response: CanvasQuestion[] (all questions in quiz)
+   - Purpose: Get all questions for instructor management
+   
+   POST /achieveup/instructor/skill-matrix/create ⚠️
+   - Request: { course_id: string, matrix_name: string, skills: string[], quiz_questions: { [questionId: string]: string[] } }
+   - Response: SkillMatrix
+   - Purpose: Create skill matrix with quiz question mapping for instructors
+   
+   GET /achieveup/instructor/courses/{courseId}/analytics ⚠️
+   - Headers: Authorization: Bearer <token>
+   - Response: CourseAnalytics
+   - Purpose: Get detailed analytics for instructor's course
+
+5. ACHIEVEUP CORE ENDPOINTS ✅:
    ============================
    
    POST /achieveup/matrix/create ✅
@@ -111,7 +147,7 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    - Request: { question_text: string, course_context?: string }
    - Response: string[]
 
-5. BADGE MANAGEMENT ENDPOINTS ✅:
+6. BADGE MANAGEMENT ENDPOINTS ✅:
    ==============================
    
    POST /achieveup/badges/generate ✅
@@ -121,7 +157,7 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    GET /achieveup/badges/{studentId} ✅
    - Response: Badge[]
 
-6. PROGRESS TRACKING ENDPOINTS ✅:
+7. PROGRESS TRACKING ENDPOINTS ✅:
    ===============================
    
    GET /achieveup/progress/{studentId}/{courseId} ✅
@@ -131,7 +167,7 @@ REQUIRED ENDPOINTS (ALL IMPLEMENTED ✅):
    - Request: { skill_updates: { [skillName: string]: { score: number, notes?: string } } }
    - Response: StudentProgress
 
-7. ANALYTICS & EXPORT ENDPOINTS ✅:
+8. ANALYTICS & EXPORT ENDPOINTS ✅:
    ================================
    
    GET /achieveup/graphs/individual/{studentId} ✅
@@ -153,7 +189,8 @@ User:
   name: string,
   email: string,
   role: 'student' | 'instructor' | 'admin',
-  canvasApiToken?: string  // Store securely, never send to frontend after entry
+  hasCanvasToken?: boolean,
+  canvasTokenType?: 'student' | 'instructor'  // Store securely, never send to frontend after entry
 }
 
 CanvasCourse:
@@ -226,6 +263,16 @@ CourseData:
   badges: Badge[]
 }
 
+CourseAnalytics:
+{
+  course_id: string,
+  total_students: number,
+  average_progress: number,
+  skill_distribution: Record<string, number>,
+  risk_students: string[],
+  top_performers: string[]
+}
+
 CANVAS API TOKEN SECURITY REQUIREMENTS ⚠️:
 ==========================================
 
@@ -233,43 +280,83 @@ CANVAS API TOKEN SECURITY REQUIREMENTS ⚠️:
    - Encrypt canvasApiToken before storing in database
    - Use environment variables for encryption keys
    - Never store tokens in plain text
+   - Store canvasTokenType alongside encrypted token
 
 2. API VALIDATION:
    - Validate token format before storing (Canvas tokens are typically 64+ characters)
    - Test token with Canvas API before storing
    - Handle token expiration gracefully
+   - Different validation logic for student vs instructor tokens
 
 3. FRONTEND SECURITY:
    - Never return full token in API responses after initial storage
-   - Only return token status (set/not set) to frontend
+   - Only return token status (hasCanvasToken) and type (canvasTokenType) to frontend
    - Clear token from user object in responses
 
 4. TOKEN MANAGEMENT:
    - Implement token refresh mechanism
    - Handle Canvas API rate limits
    - Provide clear error messages for invalid tokens
+   - Support both student and instructor token types
+
+INSTRUCTOR TOKEN INTEGRATION WITH KNOWGAP BACKEND:
+==================================================
+
+Based on the [KnowGap backend repository](https://github.com/AndresQ9/knowgap-backend), the following integration points are available:
+
+1. CANVAS INTEGRATION:
+   - KnowGap already has Canvas API integration
+   - Supports quiz data retrieval and student performance tracking
+   - Has risk prediction algorithms for students
+
+2. QUIZ MANAGEMENT:
+   - KnowGap handles quiz questions and student responses
+   - Can provide question-level analytics
+   - Supports video recommendations for questions
+
+3. INTEGRATION APPROACH:
+   - Use KnowGap's Canvas integration as foundation
+   - Extend with AchieveUp's skill matrix and badge system
+   - Leverage KnowGap's quiz data for skill assignment
+   - Combine risk prediction with skill-based learning
 
 BACKEND IMPLEMENTATION GUIDE:
 ============================
 
 1. Database Schema Update:
 ```sql
--- Add encrypted canvas token field
+-- Add encrypted canvas token field and token type
 ALTER TABLE users ADD COLUMN canvas_api_token_encrypted VARCHAR(255);
+ALTER TABLE users ADD COLUMN canvas_token_type ENUM('student', 'instructor') DEFAULT 'student';
 ALTER TABLE users ADD COLUMN canvas_token_created_at TIMESTAMP;
 ALTER TABLE users ADD COLUMN canvas_token_last_validated TIMESTAMP;
 ```
 
 2. Canvas Token Validation Function:
 ```javascript
-const validateCanvasToken = async (token) => {
+const validateCanvasToken = async (token, tokenType) => {
   try {
-    const response = await fetch('https://canvas.instructure.com/api/v1/users/self', {
+    // Test basic access
+    const userResponse = await fetch('https://canvas.instructure.com/api/v1/users/self', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    return response.ok;
+    
+    if (!userResponse.ok) return { valid: false, message: 'Invalid token' };
+    
+    // Test instructor-specific endpoints if needed
+    if (tokenType === 'instructor') {
+      const coursesResponse = await fetch('https://canvas.instructure.com/api/v1/courses', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!coursesResponse.ok) {
+        return { valid: false, message: 'Token does not have instructor permissions' };
+      }
+    }
+    
+    return { valid: true, type: tokenType };
   } catch (error) {
-    return false;
+    return { valid: false, message: 'Network error' };
   }
 };
 ```
@@ -290,22 +377,49 @@ const decryptToken = (encryptedToken) => {
 4. Profile Update with Token Validation:
 ```javascript
 app.put('/auth/profile', authenticateToken, async (req, res) => {
-  const { name, email, canvasApiToken } = req.body;
+  const { name, email, canvasApiToken, canvasTokenType } = req.body;
   
   if (canvasApiToken) {
     // Validate token with Canvas
-    const isValid = await validateCanvasToken(canvasApiToken);
-    if (!isValid) {
-      return res.status(400).json({ message: 'Invalid Canvas API token' });
+    const validation = await validateCanvasToken(canvasApiToken, canvasTokenType || 'student');
+    if (!validation.valid) {
+      return res.status(400).json({ message: validation.message });
     }
     
     // Encrypt and store token
     const encryptedToken = encryptToken(canvasApiToken);
-    // Update user with encrypted token
+    // Update user with encrypted token and type
   }
   
   // Update other profile fields
   // Return user object WITHOUT the token
+});
+```
+
+5. Instructor-Specific Endpoints:
+```javascript
+// Get all courses for instructor
+app.get('/canvas/instructor/courses', authenticateToken, async (req, res) => {
+  const user = await getUser(req.user.id);
+  if (user.canvasTokenType !== 'instructor') {
+    return res.status(403).json({ message: 'Instructor token required' });
+  }
+  
+  const token = decryptToken(user.canvasApiTokenEncrypted);
+  const courses = await fetchInstructorCourses(token);
+  res.json(courses);
+});
+
+// Get quiz questions for instructor
+app.get('/canvas/instructor/quizzes/:quizId/questions', authenticateToken, async (req, res) => {
+  const user = await getUser(req.user.id);
+  if (user.canvasTokenType !== 'instructor') {
+    return res.status(403).json({ message: 'Instructor token required' });
+  }
+  
+  const token = decryptToken(user.canvasApiTokenEncrypted);
+  const questions = await fetchQuizQuestions(token, req.params.quizId);
+  res.json(questions);
 });
 ```
 
@@ -315,12 +429,14 @@ FRONTEND READY FEATURES:
 ✅ Navigation with working links
 ✅ Settings page with 4-quadrant layout (profile top-left, token bottom-left, password spans right)
 ✅ Canvas API token management UI (set, reveal, edit, clear)
+✅ Instructor token support with type selection
+✅ Token type-specific instructions and benefits
 ✅ Skill Matrix Creator
 ✅ Skill Assignment Interface
 ✅ Badge Display System
 ✅ Progress Dashboard
 ✅ Analytics Dashboard
-✅ Login/Signup pages
+✅ Login/Signup pages with instructor token support
 ✅ Backend status indicator in navigation
 
 NOTES:
@@ -333,15 +449,21 @@ NOTES:
 - All endpoints return proper error responses (401 for invalid tokens, 400 for validation)
 - Frontend handles backend unavailability gracefully with demo mode
 - Settings page uses 4-quadrant layout for better UX
+- Instructor tokens enable advanced course management and analytics
+- Integration with KnowGap backend provides quiz data and risk prediction
 
 PRIORITY BACKEND UPDATES NEEDED:
 ===============================
-1. ⚠️ Implement Canvas token validation endpoint
-2. ⚠️ Add token encryption/decryption
-3. ⚠️ Update profile endpoint to validate tokens before storing
+1. ⚠️ Implement Canvas token validation endpoint with token type support
+2. ⚠️ Add token encryption/decryption with type storage
+3. ⚠️ Update profile endpoint to validate tokens by type before storing
 4. ⚠️ Add token connection testing endpoint
 5. ⚠️ Handle token expiration and refresh
+6. ⚠️ Implement instructor-specific Canvas endpoints
+7. ⚠️ Add instructor skill matrix creation with quiz mapping
+8. ⚠️ Create instructor analytics endpoints
+9. ⚠️ Integrate with KnowGap backend for quiz data
 
-STATUS: ✅ FRONTEND FULLY IMPLEMENTED - BACKEND NEEDS CANVAS TOKEN ENHANCEMENTS
+STATUS: ✅ FRONTEND FULLY IMPLEMENTED - BACKEND NEEDS INSTRUCTOR TOKEN ENHANCEMENTS
 
 Last Updated: December 2024 

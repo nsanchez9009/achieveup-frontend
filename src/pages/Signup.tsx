@@ -13,7 +13,8 @@ const Signup: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    canvasApiToken: ''
+    canvasApiToken: '',
+    canvasTokenType: 'student' as 'student' | 'instructor'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -181,6 +182,32 @@ const Signup: React.FC = () => {
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Canvas API Token Type</label>
+              <div className="space-y-2 mb-3">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="canvasTokenType"
+                    value="student"
+                    checked={formData.canvasTokenType === 'student'}
+                    onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700">Student Token</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="canvasTokenType"
+                    value="instructor"
+                    checked={formData.canvasTokenType === 'instructor'}
+                    onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700">Instructor Token</span>
+                </label>
+              </div>
+              
               <label htmlFor="canvasApiToken" className="block text-sm font-medium text-gray-700">
                 Canvas API Token
               </label>

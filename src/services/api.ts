@@ -122,11 +122,11 @@ export const authAPI = {
     api.get('/auth/verify'),
   me: (): Promise<AxiosResponse<{ user: User }>> => 
     api.get('/auth/me'),
-  updateProfile: (data: { name: string; email: string; canvasApiToken?: string }): Promise<AxiosResponse<{ user: User }>> => 
+  updateProfile: (data: { name: string; email: string; canvasApiToken?: string; canvasTokenType?: 'student' | 'instructor' }): Promise<AxiosResponse<{ user: User }>> => 
     api.put('/auth/profile', data),
   changePassword: (data: { currentPassword: string; newPassword: string }): Promise<AxiosResponse<void>> => 
     api.put('/auth/password', data),
-  validateCanvasToken: (data: { canvasApiToken: string }): Promise<AxiosResponse<{ valid: boolean; message?: string; user_info?: object }>> => 
+  validateCanvasToken: (data: { canvasApiToken: string; canvasTokenType: 'student' | 'instructor' }): Promise<AxiosResponse<{ valid: boolean; message?: string; user_info?: object }>> => 
     api.post('/auth/validate-canvas-token', data),
 };
 

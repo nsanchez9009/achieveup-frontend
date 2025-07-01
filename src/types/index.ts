@@ -5,6 +5,7 @@ export interface User {
   email: string;
   role: 'student' | 'instructor' | 'admin';
   hasCanvasToken?: boolean;
+  canvasTokenType?: 'student' | 'instructor';
 }
 
 export interface SignupRequest {
@@ -12,6 +13,7 @@ export interface SignupRequest {
   email: string;
   password: string;
   canvasApiToken?: string;
+  canvasTokenType?: 'student' | 'instructor';
 }
 
 // Skill Matrix Types
