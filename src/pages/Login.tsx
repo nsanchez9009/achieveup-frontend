@@ -1,26 +1,27 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Card from '../components/common/Card';
+import { useForm } from 'react-hook-form';
+
+interface LoginFormInputs {
+  email: string;
+  password: string;
+}
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const { login, backendAvailable } = useAuth();
   const navigate = useNavigate();
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormInputs>();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
+  const onSubmit = async (data: LoginFormInputs) => {
+    const { email, password } = data;
     const success = await login(email, password);
     if (success) {
       navigate('/dashboard');
     }
-    setLoading(false);
   };
 
   const handleDemoMode = () => {
@@ -31,11 +32,8 @@ const Login: React.FC = () => {
       email: 'demo@example.com',
       role: 'student'
     };
-    
     localStorage.setItem('authToken', 'demo-token');
     localStorage.setItem('userData', JSON.stringify(demoUser));
-    
-    // Force a page reload to trigger the auth context
     window.location.href = '/dashboard';
   };
 
@@ -60,7 +58,7 @@ const Login: React.FC = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <Card>
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address
@@ -68,13 +66,11 @@ const Login: React.FC = () => {
               <div className="mt-1">
                 <Input
                   id="email"
-                  name="email"
                   type="email"
                   autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
+                  {...register('email', { required: 'Email is required' })}
+                  error={errors.email?.message}
                 />
               </div>
             </div>
@@ -86,13 +82,11 @@ const Login: React.FC = () => {
               <div className="mt-1">
                 <Input
                   id="password"
-                  name="password"
                   type="password"
                   autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
+                  {...register('password', { required: 'Password is required' })}
+                  error={errors.password?.message}
                 />
               </div>
             </div>
@@ -101,9 +95,9 @@ const Login: React.FC = () => {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loading}
+                disabled={isSubmitting}
               >
-                {loading ? 'Signing in...' : 'Sign in'}
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
               </Button>
             </div>
           </form>
