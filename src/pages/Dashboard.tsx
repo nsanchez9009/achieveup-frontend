@@ -114,7 +114,10 @@ const Dashboard: React.FC = () => {
     return 'Good evening';
   };
 
-  const quickActions: QuickAction[] = [
+  const isInstructor = user?.canvasTokenType === 'instructor';
+  
+  const quickActions: QuickAction[] = isInstructor ? [
+    // Instructor-specific actions
     {
       title: 'Create Skill Matrix',
       description: 'Define skills for your course',
@@ -130,6 +133,22 @@ const Dashboard: React.FC = () => {
       color: 'bg-green-500'
     },
     {
+      title: 'Course Analytics',
+      description: 'View detailed course analytics',
+      icon: BarChart3,
+      href: '/analytics',
+      color: 'bg-purple-500'
+    },
+    {
+      title: 'Student Progress',
+      description: 'Monitor student performance',
+      icon: Users,
+      href: '/progress',
+      color: 'bg-ucf-gold'
+    }
+  ] : [
+    // Student actions
+    {
       title: 'View Badges',
       description: 'Check earned achievements',
       icon: Award,
@@ -142,6 +161,20 @@ const Dashboard: React.FC = () => {
       icon: BarChart3,
       href: '/progress',
       color: 'bg-purple-500'
+    },
+    {
+      title: 'Skill Matrix',
+      description: 'View course skills',
+      icon: Target,
+      href: '/skill-matrix',
+      color: 'bg-blue-500'
+    },
+    {
+      title: 'Analytics',
+      description: 'View your analytics',
+      icon: TrendingUp,
+      href: '/analytics',
+      color: 'bg-green-500'
     }
   ];
 
@@ -162,6 +195,11 @@ const Dashboard: React.FC = () => {
         </h1>
         <p className="text-gray-600">
           Welcome to AchieveUp - your micro-credentialling platform
+          {isInstructor && (
+            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-ucf-gold text-black">
+              Instructor
+            </span>
+          )}
         </p>
       </div>
 

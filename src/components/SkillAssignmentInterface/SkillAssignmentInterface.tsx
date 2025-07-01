@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Lightbulb, Save, RefreshCw, Download, Upload, Search, Filter, Zap, Target, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { skillAssignmentAPI, canvasAPI } from '../../services/api';
+import { skillAssignmentAPI, canvasAPI, questionAnalysisAPI } from '../../services/api';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Card from '../common/Card';
@@ -135,26 +135,44 @@ const SkillAssignmentInterface: React.FC = () => {
   };
 
   const analyzeQuestions = async (questions: CanvasQuestion[]) => {
-    const analysis: QuestionAnalysis[] = [];
-    
-    for (const question of questions) {
-      try {
-        // Analyze question complexity and suggest skills
+    try {
+      // Use the new AI-powered question analysis API
+      const response = await questionAnalysisAPI.analyzeQuestions({
+        questions: questions.map(q => ({
+          id: q.id,
+          text: q.question_text
+        }))
+      });
+      
+      setQuestionAnalysis(response.data);
+      
+      // Update suggestions based on analysis
+      const newSuggestions: Suggestions = {};
+      response.data.forEach(analysis => {
+        newSuggestions[analysis.questionId] = analysis.suggestedSkills;
+      });
+      setSuggestions(newSuggestions);
+      
+      toast.success(`Analyzed ${questions.length} questions with AI-powered suggestions`);
+    } catch (error) {
+      console.error('Error analyzing questions:', error);
+      toast.error('Failed to analyze questions. Using fallback analysis.');
+      
+      // Fallback to manual analysis
+      const analysis: QuestionAnalysis[] = [];
+      for (const question of questions) {
         const complexity = analyzeQuestionComplexity(question.question_text);
-        const suggestedSkills = await getSkillSuggestions(question.question_text, selectedCourse);
+        const suggestedSkills = await getSkillSuggestions(question.id, question.question_text);
         
         analysis.push({
           questionId: question.id,
           complexity,
           suggestedSkills,
-          confidence: Math.random() * 0.4 + 0.6 // Simulated confidence score
+          confidence: Math.random() * 0.4 + 0.6
         });
-      } catch (error) {
-        console.error('Error analyzing question:', error);
       }
+      setQuestionAnalysis(analysis);
     }
-    
-    setQuestionAnalysis(analysis);
   };
 
   const analyzeQuestionComplexity = (questionText: string): 'low' | 'medium' | 'high' => {

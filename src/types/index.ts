@@ -6,6 +6,8 @@ export interface User {
   role: 'student' | 'instructor' | 'admin';
   hasCanvasToken?: boolean;
   canvasTokenType?: 'student' | 'instructor';
+  canvas_token_created_at?: string;
+  canvas_token_last_validated?: string;
 }
 
 export interface SignupRequest {
@@ -14,6 +16,18 @@ export interface SignupRequest {
   password: string;
   canvasApiToken?: string;
   canvasTokenType?: 'student' | 'instructor';
+}
+
+export interface ProfileUpdateRequest {
+  name?: string;
+  email?: string;
+  canvasApiToken?: string;
+  canvasTokenType?: 'student' | 'instructor';
+}
+
+export interface CanvasTokenValidationRequest {
+  canvasApiToken: string;
+  canvasTokenType: 'student' | 'instructor';
 }
 
 // Skill Matrix Types
@@ -255,4 +269,47 @@ export interface RadarData {
   subject: string;
   A: number;
   fullMark: number;
+}
+
+// Question Analysis Types
+export interface QuestionAnalysisRequest {
+  questions: Array<{
+    id: string;
+    text: string;
+  }>;
+}
+
+export interface QuestionAnalysis {
+  questionId: string;
+  complexity: 'low' | 'medium' | 'high';
+  suggestedSkills: string[];
+  confidence: number;
+}
+
+export interface QuestionSuggestion {
+  questionId: string;
+  complexity: 'low' | 'medium' | 'high';
+  suggestedSkills: string[];
+  confidence: number;
+}
+
+// Instructor-specific Types
+export interface InstructorCourseAnalytics {
+  course_id: string;
+  total_students: number;
+  average_progress: number;
+  skill_distribution: {
+    [skillName: string]: number;
+  };
+  risk_students: string[];
+  top_performers: string[];
+}
+
+export interface InstructorSkillMatrixRequest {
+  course_id: string;
+  matrix_name: string;
+  skills: string[];
+  quiz_questions: {
+    [questionId: string]: string[];
+  };
 } 

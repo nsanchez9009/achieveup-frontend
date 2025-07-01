@@ -16,7 +16,14 @@ import {
   CanvasQuiz,
   CanvasQuestion,
   User,
-  SignupRequest
+  SignupRequest,
+  ProfileUpdateRequest,
+  CanvasTokenValidationRequest,
+  QuestionAnalysisRequest,
+  QuestionAnalysis,
+  QuestionSuggestion,
+  InstructorCourseAnalytics,
+  InstructorSkillMatrixRequest
 } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -110,6 +117,13 @@ export const canvasAPI = {
     api.get(`/canvas/quizzes/${quizId}/questions`),
   testConnection: (): Promise<AxiosResponse<{ connected: boolean; message?: string; user_info?: object }>> => 
     api.get('/canvas/test-connection'),
+  // Instructor-specific endpoints
+  getInstructorCourses: (): Promise<AxiosResponse<CanvasCourse[]>> => 
+    api.get('/canvas/instructor/courses'),
+  getInstructorQuizzes: (courseId: string): Promise<AxiosResponse<CanvasQuiz[]>> => 
+    api.get(`/canvas/instructor/courses/${courseId}/quizzes`),
+  getInstructorQuestions: (quizId: string): Promise<AxiosResponse<CanvasQuestion[]>> => 
+    api.get(`/canvas/instructor/quizzes/${quizId}/questions`),
 };
 
 // Authentication
@@ -122,12 +136,28 @@ export const authAPI = {
     api.get('/auth/verify'),
   me: (): Promise<AxiosResponse<{ user: User }>> => 
     api.get('/auth/me'),
-  updateProfile: (data: { name: string; email: string; canvasApiToken?: string; canvasTokenType?: 'student' | 'instructor' }): Promise<AxiosResponse<{ user: User }>> => 
+  updateProfile: (data: ProfileUpdateRequest): Promise<AxiosResponse<{ user: User }>> => 
     api.put('/auth/profile', data),
   changePassword: (data: { currentPassword: string; newPassword: string }): Promise<AxiosResponse<void>> => 
     api.put('/auth/password', data),
-  validateCanvasToken: (data: { canvasApiToken: string; canvasTokenType: 'student' | 'instructor' }): Promise<AxiosResponse<{ valid: boolean; message?: string; user_info?: object }>> => 
+  validateCanvasToken: (data: CanvasTokenValidationRequest): Promise<AxiosResponse<{ valid: boolean; message?: string; user_info?: object }>> => 
     api.post('/auth/validate-canvas-token', data),
+};
+
+// Question Analysis API
+export const questionAnalysisAPI = {
+  analyzeQuestions: (data: QuestionAnalysisRequest): Promise<AxiosResponse<QuestionAnalysis[]>> => 
+    api.post('/achieveup/questions/analyze', data),
+  getQuestionSuggestions: (questionId: string): Promise<AxiosResponse<QuestionSuggestion>> => 
+    api.get(`/achieveup/questions/${questionId}/suggestions`),
+};
+
+// Instructor-specific AchieveUp API
+export const instructorAPI = {
+  createSkillMatrix: (data: InstructorSkillMatrixRequest): Promise<AxiosResponse<SkillMatrix>> => 
+    api.post('/achieveup/instructor/skill-matrix/create', data),
+  getCourseAnalytics: (courseId: string): Promise<AxiosResponse<InstructorCourseAnalytics>> => 
+    api.get(`/achieveup/instructor/courses/${courseId}/analytics`),
 };
 
 export default api; 
