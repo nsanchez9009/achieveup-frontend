@@ -38,34 +38,7 @@ A modern React/TypeScript frontend for the AchieveUp micro-credentialing system,
 - **Build Tool**: Vite
 - **Deployment**: Netlify
 
-## 📦 Installation
 
-### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-
-### Setup
-```bash
-# Clone the repository
-git clone https://github.com/nsanchez9009/achieveup-frontend.git
-cd achieveup-frontend
-
-# Install dependencies
-npm install
-
-# Copy environment variables
-cp env.example .env
-
-# Start development server
-npm start
-```
-
-### Environment Variables
-Create a `.env` file with the following variables:
-```env
-REACT_APP_API_URL=https://gen-ai-prime-3ddeabb35bd7.herokuapp.com
-REACT_APP_CANVAS_URL=https://canvas.instructure.com
-```
 
 ## 🏗️ Project Structure
 
@@ -173,31 +146,7 @@ Data visualization and analytics from `individual_graphs.py`:
 - **Auto-Assignment**: Automatically assign suggested skills
 - **Batch Processing**: Efficient handling of large datasets
 
-## 🔧 Development
 
-### **Available Scripts**
-```bash
-# Start development server
-npm start
-
-# Build for production
-npm run build
-
-# Run tests
-npm test
-
-# Lint code
-npm run lint
-
-# Type checking
-npm run type-check
-```
-
-### **Code Quality**
-- **TypeScript**: Full type safety
-- **ESLint**: Code linting and formatting
-- **Prettier**: Code formatting
-- **Git Hooks**: Pre-commit validation
 
 ## 🚀 Deployment
 
@@ -245,52 +194,11 @@ See `backend_compatibility_instructions.txt` for detailed backend requirements a
 - **Performance Metrics**: Real-time performance tracking
 - **User Analytics**: Usage analytics and insights
 
-## 🤝 Contributing
 
-### **Development Setup**
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
 
-### **Code Standards**
-- Follow TypeScript best practices
-- Use functional components with hooks
-- Maintain consistent code formatting
-- Add proper error handling
-- Include TypeScript types
 
-## 📝 Testing
 
-### **Test Coverage**
-- **Unit Tests**: Component and utility testing
-- **Integration Tests**: API integration testing
-- **E2E Tests**: End-to-end user flow testing
-- **Accessibility Tests**: WCAG compliance testing
 
-### **Running Tests**
-```bash
-# Run all tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run E2E tests
-npm run test:e2e
-```
-
-## 🐛 Troubleshooting
-
-### **Common Issues**
-- **Canvas Token Issues**: Ensure valid Canvas API token
-- **Build Errors**: Check Node.js version and dependencies
-- **API Errors**: Verify backend URL and connectivity
-- **Styling Issues**: Clear browser cache and restart dev server
-
-### **Debug Mode**
-Enable debug mode by setting `REACT_APP_DEBUG=true` in your `.env` file.
 
 ## 📄 License
 
