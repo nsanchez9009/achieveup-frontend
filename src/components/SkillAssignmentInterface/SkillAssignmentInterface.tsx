@@ -85,56 +85,27 @@ const SkillAssignmentInterface: React.FC = () => {
     }
   }, [watchedCourse]);
 
-  // Load questions when quiz changes
-  const loadQuestions = useCallback(async (quizId: string): Promise<void> => {
+  const getSkillSuggestions = useCallback(async (questionId: string, questionText: string): Promise<string[]> => {
     try {
-      const response = await canvasAPI.getQuestions(quizId);
-      setQuestions(response.data);
-      setSelectedQuiz(quizId);
-      
-      // Initialize question skills
-      const initialSkills: QuestionSkills = {};
-      response.data.forEach((question: CanvasQuestion) => {
-        initialSkills[question.id] = [];
+      const response = await skillAssignmentAPI.suggest({
+        question_text: questionText,
+        course_context: selectedCourse
       });
-      setQuestionSkills(initialSkills);
       
-      // Analyze questions for skill suggestions
-      analyzeQuestions(response.data);
+      setSuggestions(prev => ({
+        ...prev,
+        [questionId]: response.data
+      }));
+      
+      return response.data;
     } catch (error) {
-      console.error('Error loading questions:', error);
-      toast.error('Failed to load questions');
+      console.error('Error getting suggestions:', error);
+      toast.error('Failed to get skill suggestions');
+      return [];
     }
   }, [selectedCourse]);
 
-  useEffect(() => {
-    if (watchedQuiz) {
-      loadQuestions(watchedQuiz);
-    }
-  }, [watchedQuiz, loadQuestions]);
-
-  const loadCourses = async (): Promise<void> => {
-    try {
-      const response = await canvasAPI.getCourses();
-      setCourses(response.data);
-    } catch (error) {
-      console.error('Error loading courses:', error);
-      toast.error('Failed to load courses');
-    }
-  };
-
-  const loadQuizzes = async (courseId: string): Promise<void> => {
-    try {
-      const response = await canvasAPI.getQuizzes(courseId);
-      setQuizzes(response.data);
-      setSelectedCourse(courseId);
-    } catch (error) {
-      console.error('Error loading quizzes:', error);
-      toast.error('Failed to load quizzes');
-    }
-  };
-
-  const analyzeQuestions = async (questions: CanvasQuestion[]) => {
+  const analyzeQuestions = useCallback(async (questions: CanvasQuestion[]) => {
     try {
       // Use the new AI-powered question analysis API
       const response = await questionAnalysisAPI.analyzeQuestions({
@@ -173,6 +144,55 @@ const SkillAssignmentInterface: React.FC = () => {
       }
       setQuestionAnalysis(analysis);
     }
+  }, [getSkillSuggestions]);
+
+  // Load questions when quiz changes
+  const loadQuestions = useCallback(async (quizId: string): Promise<void> => {
+    try {
+      const response = await canvasAPI.getQuestions(quizId);
+      setQuestions(response.data);
+      setSelectedQuiz(quizId);
+      
+      // Initialize question skills
+      const initialSkills: QuestionSkills = {};
+      response.data.forEach((question: CanvasQuestion) => {
+        initialSkills[question.id] = [];
+      });
+      setQuestionSkills(initialSkills);
+      
+      // Analyze questions for skill suggestions
+      analyzeQuestions(response.data);
+    } catch (error) {
+      console.error('Error loading questions:', error);
+      toast.error('Failed to load questions');
+    }
+  }, [analyzeQuestions]);
+
+  useEffect(() => {
+    if (watchedQuiz) {
+      loadQuestions(watchedQuiz);
+    }
+  }, [watchedQuiz, loadQuestions]);
+
+  const loadCourses = async (): Promise<void> => {
+    try {
+      const response = await canvasAPI.getCourses();
+      setCourses(response.data);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      toast.error('Failed to load courses');
+    }
+  };
+
+  const loadQuizzes = async (courseId: string): Promise<void> => {
+    try {
+      const response = await canvasAPI.getQuizzes(courseId);
+      setQuizzes(response.data);
+      setSelectedCourse(courseId);
+    } catch (error) {
+      console.error('Error loading quizzes:', error);
+      toast.error('Failed to load quizzes');
+    }
   };
 
   const analyzeQuestionComplexity = (questionText: string): 'low' | 'medium' | 'high' => {
@@ -184,26 +204,6 @@ const SkillAssignmentInterface: React.FC = () => {
     if (hasComplexTerms || (hasCode && wordCount > 20)) return 'high';
     if (hasCode || wordCount > 15) return 'medium';
     return 'low';
-  };
-
-  const getSkillSuggestions = async (questionId: string, questionText: string): Promise<string[]> => {
-    try {
-      const response = await skillAssignmentAPI.suggest({
-        question_text: questionText,
-        course_context: selectedCourse
-      });
-      
-      setSuggestions(prev => ({
-        ...prev,
-        [questionId]: response.data
-      }));
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error getting suggestions:', error);
-      toast.error('Failed to get skill suggestions');
-      return [];
-    }
   };
 
   const addSkillToQuestion = (questionId: string, skill: string): void => {
