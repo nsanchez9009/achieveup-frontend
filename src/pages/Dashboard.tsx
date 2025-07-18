@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { canvasInstructorAPI, instructorAPI } from '../services/api';
 import { CanvasCourse } from '../types';
 import Card from '../components/common/Card';
-import Button from '../components/common/Button';
 import { Home, Target, Award, BarChart3, Users, TrendingUp, Brain, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -56,7 +55,7 @@ const Dashboard: React.FC = () => {
 
   const isInstructor = user?.canvasTokenType === 'instructor';
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -150,11 +149,11 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isInstructor]);
 
   useEffect(() => {
     loadDashboardData();
-  }, [isInstructor]);
+  }, [loadDashboardData]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();

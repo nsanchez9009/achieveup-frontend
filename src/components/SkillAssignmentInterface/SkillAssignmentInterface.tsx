@@ -89,17 +89,44 @@ const SkillAssignmentInterface: React.FC = () => {
   // Check if user is instructor
   const isInstructor = user?.canvasTokenType === 'instructor';
 
+  const loadCourses = useCallback(async (): Promise<void> => {
+    try {
+      // Use instructor-specific API if available
+      const response = isInstructor 
+        ? await canvasInstructorAPI.getInstructorCourses()
+        : await canvasAPI.getCourses();
+      setCourses(response.data);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      toast.error('Failed to load courses');
+    }
+  }, [isInstructor]);
+
+  const loadQuizzes = useCallback(async (courseId: string): Promise<void> => {
+    try {
+      // Use instructor-specific API if available
+      const response = isInstructor 
+        ? await canvasInstructorAPI.getInstructorQuizzes(courseId)
+        : await canvasAPI.getQuizzes(courseId);
+      setQuizzes(response.data);
+      setSelectedCourse(courseId);
+    } catch (error) {
+      console.error('Error loading quizzes:', error);
+      toast.error('Failed to load quizzes');
+    }
+  }, [isInstructor]);
+
   // Load courses on component mount
   useEffect(() => {
     loadCourses();
-  }, []);
+  }, [loadCourses]);
 
   // Load quizzes when course changes
   useEffect(() => {
     if (watchedCourse) {
       loadQuizzes(watchedCourse);
     }
-  }, [watchedCourse]);
+  }, [watchedCourse, loadQuizzes]);
 
   const getSkillSuggestions = useCallback(async (questionId: string, questionText: string): Promise<string[]> => {
     try {
@@ -268,33 +295,6 @@ const SkillAssignmentInterface: React.FC = () => {
       loadQuestions(watchedQuiz);
     }
   }, [watchedQuiz, loadQuestions]);
-
-  const loadCourses = async (): Promise<void> => {
-    try {
-      // Use instructor-specific API if available
-      const response = isInstructor 
-        ? await canvasInstructorAPI.getInstructorCourses()
-        : await canvasAPI.getCourses();
-      setCourses(response.data);
-    } catch (error) {
-      console.error('Error loading courses:', error);
-      toast.error('Failed to load courses');
-    }
-  };
-
-  const loadQuizzes = async (courseId: string): Promise<void> => {
-    try {
-      // Use instructor-specific API if available
-      const response = isInstructor 
-        ? await canvasInstructorAPI.getInstructorQuizzes(courseId)
-        : await canvasAPI.getQuizzes(courseId);
-      setQuizzes(response.data);
-      setSelectedCourse(courseId);
-    } catch (error) {
-      console.error('Error loading quizzes:', error);
-      toast.error('Failed to load quizzes');
-    }
-  };
 
   const analyzeQuestionComplexity = (questionText: string): 'low' | 'medium' | 'high' => {
     const text = questionText.toLowerCase();
