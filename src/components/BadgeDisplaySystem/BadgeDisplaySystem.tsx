@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Award, Plus, RefreshCw, Download, Filter, LogIn } from 'lucide-react';
-import { badgeAPI, canvasAPI } from '../../services/api';
+import { Award, Plus, RefreshCw, Download, Filter, LogIn, Globe, Share2, Copy } from 'lucide-react';
+import { badgeAPI, canvasAPI, instructorAPI } from '../../services/api';
 import { Badge, CanvasCourse } from '../../types';
 import BadgeCard from './BadgeCard';
 import Button from '../common/Button';
@@ -19,12 +19,18 @@ interface BadgeFilters {
   earned: 'all' | 'earned' | 'unearned';
 }
 
+interface WebLinkedBadge extends Badge {
+  webUrl?: string;
+  shareUrl?: string;
+  verificationCode?: string;
+}
+
 const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({ 
   studentId = 'current', 
   courseId 
 }) => {
-  const { isAuthenticated, loading: authLoading } = useAuth();
-  const [badges, setBadges] = useState<Badge[]>([]);
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
+  const [badges, setBadges] = useState<WebLinkedBadge[]>([]);
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -35,6 +41,9 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
   });
   const [selectedCourse, setSelectedCourse] = useState<string>(courseId || '');
   const [showFilters, setShowFilters] = useState(false);
+  const [showWebLinkedOptions, setShowWebLinkedOptions] = useState(false);
+
+  const isInstructor = user?.canvasTokenType === 'instructor';
 
   const loadBadges = useCallback(async () => {
     try {
@@ -108,29 +117,79 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
 
     setGenerating(true);
     try {
-      // Generate badges based on skill levels
-      const skillLevels: { [skillName: string]: 'beginner' | 'intermediate' | 'advanced' } = {
-        'JavaScript': 'intermediate',
-        'React': 'beginner',
-        'TypeScript': 'advanced',
-        'HTML': 'beginner',
-        'CSS': 'beginner',
-        'Node.js': 'intermediate'
-      };
+      if (isInstructor && showWebLinkedOptions) {
+        // Generate web-linked badges for instructors
+        const skillLevels: { [skillName: string]: 'beginner' | 'intermediate' | 'advanced' } = {
+          'JavaScript': 'intermediate',
+          'React': 'beginner',
+          'TypeScript': 'advanced',
+          'HTML': 'beginner',
+          'CSS': 'beginner',
+          'Node.js': 'intermediate'
+        };
 
-      const response = await badgeAPI.generate({
-        student_id: studentId,
-        course_id: selectedCourse,
-        skill_levels: skillLevels
-      });
+        const response = await instructorAPI.generateWebLinkedBadges(
+          studentId,
+          selectedCourse,
+          skillLevels
+        );
 
-      setBadges(response.data);
-      toast.success('Badges generated successfully!');
+        setBadges(response.data);
+        toast.success('Web-linked badges generated successfully!');
+      } else {
+        // Generate regular badges
+        const skillLevels: { [skillName: string]: 'beginner' | 'intermediate' | 'advanced' } = {
+          'JavaScript': 'intermediate',
+          'React': 'beginner',
+          'TypeScript': 'advanced',
+          'HTML': 'beginner',
+          'CSS': 'beginner',
+          'Node.js': 'intermediate'
+        };
+
+        const response = await badgeAPI.generate({
+          student_id: studentId,
+          course_id: selectedCourse,
+          skill_levels: skillLevels
+        });
+
+        setBadges(response.data);
+        toast.success('Badges generated successfully!');
+      }
     } catch (error) {
       console.error('Error generating badges:', error);
       toast.error('Failed to generate badges');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const copyBadgeUrl = async (badge: WebLinkedBadge) => {
+    if (badge.webUrl) {
+      try {
+        await navigator.clipboard.writeText(badge.webUrl);
+        toast.success('Badge URL copied to clipboard!');
+      } catch (error) {
+        console.error('Failed to copy URL:', error);
+        toast.error('Failed to copy URL');
+      }
+    }
+  };
+
+  const shareBadge = async (badge: WebLinkedBadge) => {
+    if (badge.shareUrl && navigator.share) {
+      try {
+        await navigator.share({
+          title: `AchieveUp Badge: ${badge.name}`,
+          text: `I earned the ${badge.name} badge for ${badge.skill_name}!`,
+          url: badge.shareUrl
+        });
+      } catch (error) {
+        console.error('Failed to share badge:', error);
+        toast.error('Failed to share badge');
+      }
+    } else if (badge.webUrl) {
+      copyBadgeUrl(badge);
     }
   };
 
@@ -167,6 +226,7 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
 
   const getEarnedCount = () => badges.filter(badge => badge.earned).length;
   const getTotalCount = () => badges.length;
+  const getWebLinkedCount = () => badges.filter(badge => badge.webUrl).length;
 
   const filteredBadges = getFilteredBadges();
 
@@ -217,7 +277,10 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <Card
         title="Badge Display System"
-        subtitle="View and manage earned badges for skill mastery"
+        subtitle={isInstructor 
+          ? "Generate and manage web-linked badges for student achievements"
+          : "View and manage earned badges for skill mastery"
+        }
       >
         {/* Header with stats and actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -236,6 +299,12 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
               </div>
               <div className="text-sm text-gray-600">Completion</div>
             </div>
+            {isInstructor && (
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">{getWebLinkedCount()}</div>
+                <div className="text-sm text-gray-600">Web-Linked</div>
+              </div>
+            )}
           </div>
           
           <div className="flex gap-2">
@@ -263,7 +332,7 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
               disabled={!selectedCourse}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Generate Badges
+              {isInstructor ? 'Generate Badges' : 'Generate Badges'}
             </Button>
           </div>
         </div>
@@ -286,6 +355,36 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
             ))}
           </select>
         </div>
+
+        {/* Web-Linked Badge Options for Instructors */}
+        {isInstructor && (
+          <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium text-purple-900 mb-1">Web-Linked Badges</h4>
+                <p className="text-sm text-purple-700">
+                  Generate badges with web URLs that can be shared and verified online
+                </p>
+              </div>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={showWebLinkedOptions}
+                  onChange={(e) => setShowWebLinkedOptions(e.target.checked)}
+                  className="mr-2"
+                />
+                <span className="text-sm text-purple-700">Enable web-linked badges</span>
+              </label>
+            </div>
+            {showWebLinkedOptions && (
+              <div className="mt-3 text-sm text-purple-600">
+                <p>✓ Badges will have unique web URLs</p>
+                <p>✓ Students can share badges on social media</p>
+                <p>✓ Employers can verify badge authenticity</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Filters */}
         {showFilters && (
@@ -363,7 +462,45 @@ const BadgeDisplaySystem: React.FC<BadgeDisplaySystemProps> = ({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredBadges.filter(badge => badge && badge.id).map((badge) => (
-              <BadgeCard key={badge.id} badge={badge} />
+              <div key={badge.id} className="relative">
+                <BadgeCard badge={badge} />
+                
+                {/* Web-Linked Badge Actions */}
+                {isInstructor && badge.webUrl && (
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyBadgeUrl(badge)}
+                      className="w-8 h-8 p-0 bg-white"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => shareBadge(badge)}
+                      className="w-8 h-8 p-0 bg-white"
+                    >
+                      <Share2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
+                
+                                 {/* Web URL Indicator */}
+                 {badge.webUrl && (
+                   <div className="absolute top-2 left-2">
+                     <div className="relative group">
+                       <div className="bg-green-500 text-white rounded-full p-1">
+                         <Globe className="w-3 h-3" />
+                       </div>
+                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                         Web-linked badge
+                       </div>
+                     </div>
+                   </div>
+                 )}
+              </div>
             ))}
           </div>
         )}

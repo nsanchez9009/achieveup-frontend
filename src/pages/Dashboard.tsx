@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Award, BarChart3, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { canvasInstructorAPI, instructorAPI } from '../services/api';
+import { CanvasCourse } from '../types';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { canvasAPI } from '../services/api';
-import { CanvasCourse } from '../types';
+import { Home, Target, Award, BarChart3, Users, TrendingUp, Brain, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 interface Activity {
@@ -29,6 +30,13 @@ interface DashboardStats {
   recentActivity: Activity[];
 }
 
+interface InstructorDashboardStats {
+  totalCourses: number;
+  totalStudents: number;
+  averageProgress: number;
+  recentActivity: Activity[];
+}
+
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
@@ -39,34 +47,44 @@ const Dashboard: React.FC = () => {
     averageScore: 0,
     recentActivity: []
   });
+  const [instructorStats, setInstructorStats] = useState<InstructorDashboardStats>({
+    totalCourses: 0,
+    totalStudents: 0,
+    averageProgress: 0,
+    recentActivity: []
+  });
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  // Reload dashboard data when user's Canvas token changes
-  useEffect(() => {
-    if (user?.hasCanvasToken) {
-      loadDashboardData();
-    }
-  }, [user?.hasCanvasToken]);
+  const isInstructor = user?.canvasTokenType === 'instructor';
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Load user's courses from Canvas
-      const coursesResponse = await canvasAPI.getCourses();
-      setCourses(coursesResponse.data);
-      
-      // Calculate stats based on real data
-      setStats({
-        totalSkills: coursesResponse.data.length, // Show actual course count
-        earnedBadges: 0, // Will be calculated from badge API
-        averageScore: 0, // Will be calculated from score API
-        recentActivity: [] // Will be calculated from recent activity
-      });
-      
+      if (isInstructor) {
+        // Load instructor-specific data
+        const [coursesResponse, dashboardResponse] = await Promise.all([
+          canvasInstructorAPI.getInstructorCourses(),
+          instructorAPI.getInstructorDashboard()
+        ]);
+        
+        setCourses(coursesResponse.data);
+        setInstructorStats({
+          totalCourses: dashboardResponse.data.totalCourses,
+          totalStudents: dashboardResponse.data.totalStudents,
+          averageProgress: dashboardResponse.data.averageProgress,
+          recentActivity: dashboardResponse.data.recentActivity || []
+        });
+      } else {
+        // Load student data (existing logic)
+        const response = await canvasInstructorAPI.getInstructorCourses();
+        setCourses(response.data);
+        setStats({
+          totalSkills: 0,
+          earnedBadges: 0,
+          averageScore: 0,
+          recentActivity: []
+        });
+      }
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
       
@@ -74,38 +92,69 @@ const Dashboard: React.FC = () => {
       if (error.response?.status === 404) {
         // Backend endpoints not implemented yet
         setCourses([]);
-        setStats({
-          totalSkills: 0,
-          earnedBadges: 0,
-          averageScore: 0,
-          recentActivity: []
-        });
+        if (isInstructor) {
+          setInstructorStats({
+            totalCourses: 0,
+            totalStudents: 0,
+            averageProgress: 0,
+            recentActivity: []
+          });
+        } else {
+          setStats({
+            totalSkills: 0,
+            earnedBadges: 0,
+            averageScore: 0,
+            recentActivity: []
+          });
+        }
         toast.error('Canvas integration not available yet. Backend endpoints need to be implemented.');
       } else if (error.response?.status === 401) {
         // User needs to set up Canvas API token
         setCourses([]);
-        setStats({
-          totalSkills: 0,
-          earnedBadges: 0,
-          averageScore: 0,
-          recentActivity: []
-        });
+        if (isInstructor) {
+          setInstructorStats({
+            totalCourses: 0,
+            totalStudents: 0,
+            averageProgress: 0,
+            recentActivity: []
+          });
+        } else {
+          setStats({
+            totalSkills: 0,
+            earnedBadges: 0,
+            averageScore: 0,
+            recentActivity: []
+          });
+        }
         toast.error('Please set up your Canvas API token in Settings to view courses.');
       } else {
         // Other errors
         setCourses([]);
-        setStats({
-          totalSkills: 0,
-          earnedBadges: 0,
-          averageScore: 0,
-          recentActivity: []
-        });
+        if (isInstructor) {
+          setInstructorStats({
+            totalCourses: 0,
+            totalStudents: 0,
+            averageProgress: 0,
+            recentActivity: []
+          });
+        } else {
+          setStats({
+            totalSkills: 0,
+            earnedBadges: 0,
+            averageScore: 0,
+            recentActivity: []
+          });
+        }
         toast.error('Failed to load dashboard data. Please try again later.');
       }
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [isInstructor]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -114,258 +163,292 @@ const Dashboard: React.FC = () => {
     return 'Good evening';
   };
 
-  const isInstructor = user?.canvasTokenType === 'instructor';
-  
-  const quickActions: QuickAction[] = isInstructor ? [
-    // Instructor-specific actions
+  // Instructor-specific quick actions
+  const instructorQuickActions: QuickAction[] = [
     {
       title: 'Create Skill Matrix',
-      description: 'Define skills for your course',
+      description: 'Define skills and competencies for your course',
       icon: Target,
       href: '/skill-matrix',
       color: 'bg-blue-500'
     },
     {
-      title: 'Assign Skills',
-      description: 'Link skills to quiz questions',
-      icon: Target,
+      title: 'AI Skill Assignment',
+      description: 'Use AI to automatically assign skills to questions',
+      icon: Brain,
       href: '/skill-assignment',
-      color: 'bg-green-500'
-    },
-    {
-      title: 'Course Analytics',
-      description: 'View detailed course analytics',
-      icon: BarChart3,
-      href: '/analytics',
       color: 'bg-purple-500'
     },
     {
-      title: 'Student Progress',
-      description: 'Monitor student performance',
-      icon: Users,
-      href: '/progress',
-      color: 'bg-ucf-gold'
-    }
-  ] : [
-    // Student actions
+      title: 'Student Analytics',
+      description: 'View detailed student progress and performance',
+      icon: BarChart3,
+      href: '/analytics',
+      color: 'bg-green-500'
+    },
     {
-      title: 'View Badges',
-      description: 'Check earned achievements',
+      title: 'Generate Badges',
+      description: 'Create web-linked badges for student achievements',
       icon: Award,
       href: '/badges',
-      color: 'bg-ucf-gold'
-    },
-    {
-      title: 'Progress Dashboard',
-      description: 'Track learning progress',
-      icon: BarChart3,
-      href: '/progress',
-      color: 'bg-purple-500'
-    },
-    {
-      title: 'Skill Matrix',
-      description: 'View course skills',
-      icon: Target,
-      href: '/skill-matrix',
-      color: 'bg-blue-500'
-    },
-    {
-      title: 'Analytics',
-      description: 'View your analytics',
-      icon: TrendingUp,
-      href: '/analytics',
-      color: 'bg-green-500'
+      color: 'bg-yellow-500'
     }
   ];
 
+  // Student quick actions (existing)
+  const studentQuickActions: QuickAction[] = [
+    {
+      title: 'View Progress',
+      description: 'Track your skill development and progress',
+      icon: TrendingUp,
+      href: '/progress',
+      color: 'bg-green-500'
+    },
+    {
+      title: 'Earned Badges',
+      description: 'View your earned skill badges',
+      icon: Award,
+      href: '/badges',
+      color: 'bg-yellow-500'
+    },
+    {
+      title: 'Course Analytics',
+      description: 'Detailed analytics and insights',
+      icon: BarChart3,
+      href: '/analytics',
+      color: 'bg-blue-500'
+    }
+  ];
+
+  const quickActions = isInstructor ? instructorQuickActions : studentQuickActions;
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      {/* Welcome Header */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Welcome Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {getGreeting()}, {user?.name || 'Student'}!
+        <h1 className="text-3xl font-bold text-gray-900">
+          {getGreeting()}, {user?.name || 'User'}!
         </h1>
-        <p className="text-gray-600">
-          Welcome to AchieveUp - your micro-credentialling platform
-          {isInstructor && (
-            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-ucf-gold text-black">
-              Instructor
-            </span>
-          )}
+        <p className="text-gray-600 mt-2">
+          {isInstructor 
+            ? 'Welcome to your instructor dashboard. Manage your courses, track student progress, and create skill-based assessments.'
+            : 'Welcome to your learning dashboard. Track your progress and earn badges for your achievements.'
+          }
         </p>
+        
+        {/* Token Type Indicator */}
+        <div className="mt-4 flex items-center gap-2">
+          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+            isInstructor 
+              ? 'bg-purple-100 text-purple-800' 
+              : 'bg-blue-100 text-blue-800'
+          }`}>
+            {isInstructor ? 'Instructor Mode' : 'Student Mode'}
+          </div>
+          {!user?.hasCanvasToken && (
+            <div className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+              Canvas Token Required
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Target className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Courses</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {stats.totalSkills > 0 ? stats.totalSkills : '0'}
-              </p>
-              {stats.totalSkills === 0 && (
-                <p className="text-xs text-gray-500 mt-1">
-                  {user?.hasCanvasToken ? 'Loading...' : 'Set up Canvas token'}
-                </p>
-              )}
-            </div>
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {isInstructor ? (
+          <>
+            <Card className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-4">
+                <Home className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{instructorStats.totalCourses}</div>
+              <div className="text-sm text-gray-600">Active Courses</div>
+            </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Award className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Badges Earned</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.earnedBadges}</p>
-            </div>
-          </div>
-        </Card>
+            <Card className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mx-auto mb-4">
+                <Users className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{instructorStats.totalStudents}</div>
+              <div className="text-sm text-gray-600">Total Students</div>
+            </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Average Progress</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.averageScore}%</p>
-            </div>
-          </div>
-        </Card>
+            <Card className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg mx-auto mb-4">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{instructorStats.averageProgress}%</div>
+              <div className="text-sm text-gray-600">Avg Progress</div>
+            </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Users className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Recent Activity</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.recentActivity.length}</p>
-            </div>
-          </div>
-        </Card>
+            <Card className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-lg mx-auto mb-4">
+                <Brain className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{courses.length}</div>
+              <div className="text-sm text-gray-600">Courses Loaded</div>
+            </Card>
+          </>
+        ) : (
+          <>
+            <Card className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-4">
+                <Target className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.totalSkills}</div>
+              <div className="text-sm text-gray-600">Skills Tracked</div>
+            </Card>
+
+            <Card className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-lg mx-auto mb-4">
+                <Award className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.earnedBadges}</div>
+              <div className="text-sm text-gray-600">Badges Earned</div>
+            </Card>
+
+            <Card className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mx-auto mb-4">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.averageScore}%</div>
+              <div className="text-sm text-gray-600">Average Score</div>
+            </Card>
+
+            <Card className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg mx-auto mb-4">
+                <Home className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{courses.length}</div>
+              <div className="text-sm text-gray-600">Enrolled Courses</div>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="space-y-3">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <Button 
-                  className="w-full flex items-center justify-start" 
-                  variant="outline" 
-                  key={action.title}
-                  onClick={() => window.location.href = action.href}
-                >
-                  <Icon className="w-4 h-4 mr-2 flex-shrink-0" />
-                  {action.title}
-                </Button>
-              );
-            })}
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Courses</h3>
-          {courses.length > 0 ? (
-            <div className="space-y-3">
-              {courses.slice(0, 3).map((course) => (
-                <div key={course.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{course.name}</p>
-                    <p className="text-sm text-gray-600">{course.code}</p>
+      <Card title="Quick Actions" className="mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((action, index) => {
+            const Icon = action.icon;
+            return (
+              <Link
+                key={index}
+                to={action.href}
+                className="group block p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-md transition-all duration-200"
+              >
+                <div className="flex items-center">
+                  <div className={`w-10 h-10 ${action.color} rounded-lg flex items-center justify-center mr-3 group-hover:scale-110 transition-transform duration-200`}>
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => {
-                      toast('Course details page coming soon!');
-                      // TODO: Navigate to course detail page when implemented
-                      // window.location.href = `/course/${course.id}`;
-                    }}
-                  >
-                    View
-                  </Button>
+                  <div>
+                    <h3 className="font-medium text-gray-900 group-hover:text-gray-700">
+                      {action.title}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {action.description}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card title="Recent Activity">
+          {(isInstructor ? instructorStats.recentActivity : stats.recentActivity).length > 0 ? (
+            <div className="space-y-4">
+              {(isInstructor ? instructorStats.recentActivity : stats.recentActivity).map((activity, index) => (
+                <div key={index} className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    {activity.type === 'badge' && <Award className="w-5 h-5 text-yellow-600" />}
+                    {activity.type === 'progress' && <TrendingUp className="w-5 h-5 text-green-600" />}
+                    {activity.type === 'assessment' && <Target className="w-5 h-5 text-blue-600" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                    <p className="text-sm text-gray-600">{activity.description}</p>
+                    <p className="text-xs text-gray-500">{activity.time}</p>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-6">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-2">
+                {isInstructor ? <Users className="w-8 h-8 mx-auto" /> : <Award className="w-8 h-8 mx-auto" />}
               </div>
-              <p className="text-gray-500 mb-2">No courses found</p>
-              <p className="text-sm text-gray-400 mb-4">
-                {user?.hasCanvasToken 
-                  ? "Canvas integration is being set up. Check back soon!"
-                  : "Set up your Canvas API token in Settings to view your courses."
+              <p className="text-gray-600">
+                {isInstructor 
+                  ? 'No recent activity. Start by creating a skill matrix for your course.'
+                  : 'No recent activity. Complete assessments to see your progress here.'
                 }
               </p>
-              {!user?.hasCanvasToken && (
-                <Button size="sm" variant="outline" onClick={() => window.location.href = '/settings'}>
-                  Go to Settings
-                </Button>
+            </div>
+          )}
+        </Card>
+
+        {/* Courses */}
+        <Card title={isInstructor ? "Your Courses" : "Enrolled Courses"}>
+          {courses.length > 0 ? (
+            <div className="space-y-3">
+              {courses.slice(0, 5).map((course) => (
+                <div key={course.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{course.name}</h4>
+                    <p className="text-sm text-gray-600">{course.code}</p>
+                  </div>
+                  <Link
+                    to={isInstructor ? `/analytics?courseId=${course.id}` : `/progress?courseId=${course.id}`}
+                    className="text-sm text-primary-600 hover:text-primary-800"
+                  >
+                    {isInstructor ? 'View Analytics' : 'View Progress'}
+                  </Link>
+                </div>
+              ))}
+              {courses.length > 5 && (
+                <div className="text-center pt-2">
+                  <Link to="/settings" className="text-sm text-primary-600 hover:text-primary-800">
+                    View all {courses.length} courses
+                  </Link>
+                </div>
               )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-2">
+                <Home className="w-8 h-8 mx-auto" />
+              </div>
+              <p className="text-gray-600 mb-4">
+                {isInstructor 
+                  ? 'No courses found. Make sure your Canvas instructor token is set up correctly.'
+                  : 'No courses found. Make sure your Canvas student token is set up correctly.'
+                }
+              </p>
+              <Link
+                to="/settings"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Configure Canvas Token
+              </Link>
             </div>
           )}
         </Card>
       </div>
-
-      {/* Recent Activity */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-        {stats.recentActivity.length > 0 ? (
-          <div className="space-y-3">
-            {stats.recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">{activity.title}</p>
-                  <p className="text-sm text-gray-600">{activity.description}</p>
-                  <p className="text-xs text-gray-500">{activity.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Users className="w-6 h-6 text-gray-400" />
-            </div>
-            <p className="text-gray-500 mb-2">No recent activity to display</p>
-            <p className="text-sm text-gray-400 mb-4">
-              {user?.hasCanvasToken 
-                ? "Complete assessments and earn badges to see your activity here"
-                : "Set up Canvas integration to start tracking your progress"
-              }
-            </p>
-            {!user?.hasCanvasToken && (
-              <Button size="sm" variant="outline" onClick={() => window.location.href = '/settings'}>
-                Set Up Canvas
-              </Button>
-            )}
-          </div>
-        )}
-      </Card>
     </div>
   );
 };

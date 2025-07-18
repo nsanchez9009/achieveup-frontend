@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Lightbulb, Save, Download, Upload, Search, Zap, Target, Settings } from 'lucide-react';
+import { Lightbulb, Save, Download, Upload, Search, Zap, Target, Settings, Brain, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { skillAssignmentAPI, canvasAPI, questionAnalysisAPI } from '../../services/api';
+import { skillAssignmentAPI, canvasInstructorAPI, instructorAPI, canvasAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Card from '../common/Card';
@@ -47,7 +48,16 @@ interface FormData {
   quizId: string;
 }
 
+interface AIAnalysisStatus {
+  [questionId: string]: 'pending' | 'analyzing' | 'completed' | 'error';
+}
+
+interface HumanReviewStatus {
+  [questionId: string]: boolean; // true if human has reviewed
+}
+
 const SkillAssignmentInterface: React.FC = () => {
+  const { user } = useAuth();
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [quizzes, setQuizzes] = useState<CanvasQuiz[]>([]);
   const [questions, setQuestions] = useState<CanvasQuestion[]>([]);
@@ -58,10 +68,13 @@ const SkillAssignmentInterface: React.FC = () => {
   const [questionSkills, setQuestionSkills] = useState<QuestionSkills>({});
   const [suggestions, setSuggestions] = useState<Suggestions>({});
   const [questionAnalysis, setQuestionAnalysis] = useState<QuestionAnalysis[]>([]);
+  const [aiAnalysisStatus, setAiAnalysisStatus] = useState<AIAnalysisStatus>({});
+  const [humanReviewStatus, setHumanReviewStatus] = useState<HumanReviewStatus>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [skillFilter, setSkillFilter] = useState('all');
   const [bulkSkill, setBulkSkill] = useState('');
+  const [autoAnalysisInProgress, setAutoAnalysisInProgress] = useState(false);
 
   const {
     register,
@@ -72,6 +85,9 @@ const SkillAssignmentInterface: React.FC = () => {
 
   const watchedCourse = watch('courseId');
   const watchedQuiz = watch('quizId');
+
+  // Check if user is instructor
+  const isInstructor = user?.canvasTokenType === 'instructor';
 
   // Load courses on component mount
   useEffect(() => {
@@ -105,68 +121,147 @@ const SkillAssignmentInterface: React.FC = () => {
     }
   }, [selectedCourse]);
 
-  const analyzeQuestions = useCallback(async (questions: CanvasQuestion[]) => {
+  // Enhanced AI-powered question analysis
+  const analyzeQuestionsWithAI = useCallback(async (questions: CanvasQuestion[], courseContext: string) => {
+    if (!isInstructor) {
+      toast.error('Instructor token required for AI analysis');
+      return;
+    }
+
+    setAutoAnalysisInProgress(true);
+    
     try {
-      // Use the new AI-powered question analysis API
-      const response = await questionAnalysisAPI.analyzeQuestions({
-        questions: questions.map(q => ({
-          id: q.id,
-          text: q.question_text
-        }))
+      // Set all questions to analyzing status
+      const initialStatus: AIAnalysisStatus = {};
+      questions.forEach(q => {
+        initialStatus[q.id] = 'analyzing';
       });
+      setAiAnalysisStatus(initialStatus);
+
+      // Use instructor-specific AI analysis
+      const response = await instructorAPI.analyzeQuestionsWithAI(
+        questions.map(q => ({ id: q.id, text: q.question_text })),
+        courseContext
+      );
       
       setQuestionAnalysis(response.data);
       
-      // Update suggestions based on analysis
+      // Update suggestions based on AI analysis
       const newSuggestions: Suggestions = {};
+      const completedStatus: AIAnalysisStatus = {};
+      
       response.data.forEach(analysis => {
         newSuggestions[analysis.questionId] = analysis.suggestedSkills;
+        completedStatus[analysis.questionId] = 'completed';
       });
-      setSuggestions(newSuggestions);
       
-      toast.success(`Analyzed ${questions.length} questions with AI-powered suggestions`);
+      setSuggestions(newSuggestions);
+      setAiAnalysisStatus(completedStatus);
+      
+      toast.success(`AI analyzed ${questions.length} questions with ${response.data.length} skill suggestions`);
     } catch (error) {
-      console.error('Error analyzing questions:', error);
-      toast.error('Failed to analyze questions. Using fallback analysis.');
+      console.error('Error analyzing questions with AI:', error);
+      toast.error('AI analysis failed. Using fallback analysis.');
       
       // Fallback to manual analysis
       const analysis: QuestionAnalysis[] = [];
+      const errorStatus: AIAnalysisStatus = {};
+      
       for (const question of questions) {
-        const complexity = analyzeQuestionComplexity(question.question_text);
-        const suggestedSkills = await getSkillSuggestions(question.id, question.question_text);
-        
-        analysis.push({
-          questionId: question.id,
-          complexity,
-          suggestedSkills,
-          confidence: Math.random() * 0.4 + 0.6
-        });
+        try {
+          const complexity = analyzeQuestionComplexity(question.question_text);
+          const suggestedSkills = await getSkillSuggestions(question.id, question.question_text);
+          
+          analysis.push({
+            questionId: question.id,
+            complexity,
+            suggestedSkills,
+            confidence: Math.random() * 0.4 + 0.6
+          });
+          
+          errorStatus[question.id] = 'completed';
+        } catch (e) {
+          errorStatus[question.id] = 'error';
+        }
       }
+      
       setQuestionAnalysis(analysis);
+      setAiAnalysisStatus(errorStatus);
+    } finally {
+      setAutoAnalysisInProgress(false);
     }
-  }, [getSkillSuggestions]);
+  }, [isInstructor, getSkillSuggestions]);
+
+  // Bulk AI skill assignment
+  const bulkAssignSkillsWithAI = async () => {
+    if (!selectedCourse || !selectedQuiz) {
+      toast.error('Please select a course and quiz first');
+      return;
+    }
+
+    if (!isInstructor) {
+      toast.error('Instructor token required for AI bulk assignment');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await instructorAPI.bulkAssignSkillsWithAI(selectedCourse, selectedQuiz);
+      
+      setQuestionSkills(response.data);
+      
+      // Mark all questions as reviewed by AI
+      const reviewStatus: HumanReviewStatus = {};
+      Object.keys(response.data).forEach(questionId => {
+        reviewStatus[questionId] = false; // AI assigned, needs human review
+      });
+      setHumanReviewStatus(reviewStatus);
+      
+      toast.success('AI has assigned skills to all questions. Please review and refine.');
+    } catch (error) {
+      console.error('Error with AI bulk assignment:', error);
+      toast.error('AI bulk assignment failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Load questions when quiz changes
   const loadQuestions = useCallback(async (quizId: string): Promise<void> => {
     try {
-      const response = await canvasAPI.getQuestions(quizId);
+      // Use instructor-specific API if available
+      const response = isInstructor 
+        ? await canvasInstructorAPI.getInstructorQuestions(quizId)
+        : await canvasAPI.getQuestions(quizId);
+      
       setQuestions(response.data);
       setSelectedQuiz(quizId);
       
       // Initialize question skills
       const initialSkills: QuestionSkills = {};
+      const initialStatus: AIAnalysisStatus = {};
+      const initialReviewStatus: HumanReviewStatus = {};
+      
       response.data.forEach((question: CanvasQuestion) => {
         initialSkills[question.id] = [];
+        initialStatus[question.id] = 'pending';
+        initialReviewStatus[question.id] = false;
       });
-      setQuestionSkills(initialSkills);
       
-      // Analyze questions for skill suggestions
-      analyzeQuestions(response.data);
+      setQuestionSkills(initialSkills);
+      setAiAnalysisStatus(initialStatus);
+      setHumanReviewStatus(initialReviewStatus);
+      
+      // Auto-analyze questions if instructor
+      if (isInstructor && response.data.length > 0) {
+        const courseContext = courses.find(c => c.id === selectedCourse)?.name || '';
+        analyzeQuestionsWithAI(response.data, courseContext);
+      }
     } catch (error) {
       console.error('Error loading questions:', error);
       toast.error('Failed to load questions');
     }
-  }, [analyzeQuestions]);
+  }, [isInstructor, selectedCourse, courses, analyzeQuestionsWithAI]);
 
   useEffect(() => {
     if (watchedQuiz) {
@@ -176,7 +271,10 @@ const SkillAssignmentInterface: React.FC = () => {
 
   const loadCourses = async (): Promise<void> => {
     try {
-      const response = await canvasAPI.getCourses();
+      // Use instructor-specific API if available
+      const response = isInstructor 
+        ? await canvasInstructorAPI.getInstructorCourses()
+        : await canvasAPI.getCourses();
       setCourses(response.data);
     } catch (error) {
       console.error('Error loading courses:', error);
@@ -186,7 +284,10 @@ const SkillAssignmentInterface: React.FC = () => {
 
   const loadQuizzes = async (courseId: string): Promise<void> => {
     try {
-      const response = await canvasAPI.getQuizzes(courseId);
+      // Use instructor-specific API if available
+      const response = isInstructor 
+        ? await canvasInstructorAPI.getInstructorQuizzes(courseId)
+        : await canvasAPI.getQuizzes(courseId);
       setQuizzes(response.data);
       setSelectedCourse(courseId);
     } catch (error) {
@@ -354,6 +455,19 @@ const SkillAssignmentInterface: React.FC = () => {
   const stats = getAssignmentStats();
   const filteredQuestions = getFilteredQuestions();
 
+  const markAsReviewed = (questionId: string) => {
+    setHumanReviewStatus(prev => ({
+      ...prev,
+      [questionId]: true
+    }));
+  };
+
+  const getReviewStatus = () => {
+    const totalQuestions = questions.length;
+    const reviewedQuestions = Object.values(humanReviewStatus).filter(reviewed => reviewed).length;
+    return { totalQuestions, reviewedQuestions, pendingReview: totalQuestions - reviewedQuestions };
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       <Card
@@ -469,7 +583,83 @@ const SkillAssignmentInterface: React.FC = () => {
           {showAdvanced && questions.length > 0 && (
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="text-lg font-medium mb-4">Advanced Features</h3>
+              
+              {/* AI Analysis Status */}
+              {isInstructor && (
+                <div className="mb-4 p-3 bg-white rounded-lg border">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-gray-900">AI Analysis Status</h4>
+                    {autoAnalysisInProgress && (
+                      <div className="flex items-center text-blue-600">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                        Analyzing...
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="flex items-center">
+                      <Clock className="w-4 h-4 text-gray-400 mr-2" />
+                      <span>Pending: {Object.values(aiAnalysisStatus).filter(s => s === 'pending').length}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      <span>Analyzing: {Object.values(aiAnalysisStatus).filter(s => s === 'analyzing').length}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                      <span>Completed: {Object.values(aiAnalysisStatus).filter(s => s === 'completed').length}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <AlertCircle className="w-4 h-4 text-red-600 mr-2" />
+                      <span>Errors: {Object.values(aiAnalysisStatus).filter(s => s === 'error').length}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Human Review Status */}
+              {isInstructor && (
+                <div className="mb-4 p-3 bg-white rounded-lg border">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-gray-900">Human Review Status</h4>
+                    <div className="text-sm text-gray-600">
+                      {getReviewStatus().reviewedQuestions} / {getReviewStatus().totalQuestions} reviewed
+                    </div>
+                  </div>
+                  
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${getReviewStatus().totalQuestions > 0 ? (getReviewStatus().reviewedQuestions / getReviewStatus().totalQuestions) * 100 : 0}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* AI Bulk Assignment */}
+                {isInstructor && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      AI Bulk Assignment
+                    </label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={bulkAssignSkillsWithAI}
+                      disabled={!selectedCourse || !selectedQuiz || loading}
+                      className="w-full"
+                    >
+                      <Brain className="w-4 h-4 mr-2" />
+                      AI Assign All Skills
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-1">
+                      AI will analyze and assign skills to all questions
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Bulk Assign Skill
@@ -507,45 +697,30 @@ const SkillAssignmentInterface: React.FC = () => {
                     Auto-Assign
                   </Button>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Question Analysis
-                  </label>
-                  <div className="text-sm text-gray-600">
-                    {questionAnalysis.length} questions analyzed
-                  </div>
-                </div>
               </div>
             </div>
           )}
 
-          {/* Filters */}
+          {/* Search and Filters */}
           {questions.length > 0 && (
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Search Questions
-                </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
+                    type="text"
+                    placeholder="Search questions..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search question text..."
                     className="pl-10"
                   />
                 </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filter
-                </label>
+              <div className="w-full md:w-48">
                 <select
                   value={skillFilter}
                   onChange={(e) => setSkillFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="all">All Questions</option>
                   <option value="assigned">With Skills</option>
@@ -573,14 +748,78 @@ const SkillAssignmentInterface: React.FC = () => {
                 const questionSkillsList = questionSkills[question.id] || [];
                 const questionSuggestions = suggestions[question.id] || [];
                 const analysis = questionAnalysis.find(a => a.questionId === question.id);
+                const aiStatus = aiAnalysisStatus[question.id];
+                const isReviewed = humanReviewStatus[question.id];
                 
                 return (
                   <div key={question.id} className="bg-white border rounded-lg p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-2">
-                          Question {questions.indexOf(question) + 1}
-                        </h4>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="font-medium text-gray-900">
+                            Question {questions.indexOf(question) + 1}
+                          </h4>
+                          
+                                                     {/* AI Analysis Status Indicator */}
+                           {isInstructor && aiStatus && (
+                             <div className="flex items-center gap-1">
+                               {aiStatus === 'pending' && (
+                                 <div className="relative group">
+                                   <Clock className="w-4 h-4 text-gray-400" />
+                                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                     Pending analysis
+                                   </div>
+                                 </div>
+                               )}
+                               {aiStatus === 'analyzing' && (
+                                 <div className="relative group">
+                                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                     Analyzing...
+                                   </div>
+                                 </div>
+                               )}
+                               {aiStatus === 'completed' && (
+                                 <div className="relative group">
+                                   <CheckCircle className="w-4 h-4 text-green-600" />
+                                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                     AI analysis completed
+                                   </div>
+                                 </div>
+                               )}
+                               {aiStatus === 'error' && (
+                                 <div className="relative group">
+                                   <AlertCircle className="w-4 h-4 text-red-600" />
+                                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                     Analysis failed
+                                   </div>
+                                 </div>
+                               )}
+                             </div>
+                           )}
+                           
+                           {/* Human Review Status */}
+                           {isInstructor && (
+                             <div className="flex items-center gap-1">
+                               {isReviewed ? (
+                                 <div className="relative group">
+                                   <CheckCircle className="w-4 h-4 text-green-600" />
+                                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                     Reviewed by human
+                                   </div>
+                                 </div>
+                               ) : (
+                                 <div className="relative group">
+                                   <AlertCircle className="w-4 h-4 text-yellow-600" />
+                                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                     Needs human review
+                                   </div>
+                                 </div>
+                               )}
+                             </div>
+                           )}
+                        </div>
+                        
                         <p className="text-gray-700 text-sm mb-2">{question.question_text}</p>
                         
                         {analysis && (
@@ -605,27 +844,21 @@ const SkillAssignmentInterface: React.FC = () => {
                       <h5 className="text-sm font-medium text-gray-700 mb-2">Assigned Skills:</h5>
                       <div className="flex flex-wrap gap-2">
                         {questionSkillsList.map((skill, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center bg-primary-100 text-primary-800 px-2 py-1 rounded-full text-sm"
-                          >
-                            <span>{skill}</span>
+                          <div key={index} className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
+                            {skill}
                             <button
                               type="button"
                               onClick={() => removeSkillFromQuestion(question.id, index)}
-                              className="ml-2 hover:text-primary-600"
+                              className="ml-2 text-blue-600 hover:text-blue-800"
                             >
                               ×
                             </button>
                           </div>
                         ))}
-                        {questionSkillsList.length === 0 && (
-                          <span className="text-gray-500 text-sm">No skills assigned</span>
-                        )}
                       </div>
                     </div>
 
-                    {/* Skill Suggestions */}
+                    {/* Suggested Skills */}
                     {questionSuggestions.length > 0 && (
                       <div className="mb-3">
                         <h5 className="text-sm font-medium text-gray-700 mb-2">Suggested Skills:</h5>
@@ -652,28 +885,37 @@ const SkillAssignmentInterface: React.FC = () => {
                         onKeyPress={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            const input = e.target as HTMLInputElement;
-                            if (input.value.trim()) {
-                              addSkillToQuestion(question.id, input.value.trim());
-                              input.value = '';
+                            const target = e.target as HTMLInputElement;
+                            if (target.value.trim()) {
+                              addSkillToQuestion(question.id, target.value.trim());
+                              target.value = '';
                             }
                           }
                         }}
                         className="flex-1"
                       />
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => {
-                          const input = document.querySelector(`input[placeholder="Add skill manually..."]`) as HTMLInputElement;
-                          if (input && input.value.trim()) {
-                            addSkillToQuestion(question.id, input.value.trim());
-                            input.value = '';
-                          }
-                        }}
-                      >
-                        Add
-                      </Button>
+                      
+                      {/* Mark as Reviewed Button */}
+                      {isInstructor && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isReviewed ? "success" : "warning"}
+                          onClick={() => markAsReviewed(question.id)}
+                        >
+                          {isReviewed ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Reviewed
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="w-4 h-4 mr-1" />
+                              Mark Reviewed
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
@@ -684,11 +926,7 @@ const SkillAssignmentInterface: React.FC = () => {
           {/* Submit Button */}
           {questions.length > 0 && (
             <div className="flex justify-end">
-              <Button
-                type="submit"
-                loading={loading}
-                disabled={!selectedCourse || !selectedQuiz || stats.totalAssignments === 0}
-              >
+              <Button type="submit" loading={loading} disabled={loading}>
                 <Save className="w-4 h-4 mr-2" />
                 Save Assignments
               </Button>
