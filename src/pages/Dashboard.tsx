@@ -221,6 +221,21 @@ const Dashboard: React.FC = () => {
 
   const quickActions = isInstructor ? instructorQuickActions : studentQuickActions;
 
+  // State and effect for AI-Suggested Skills (Test)
+  const [aiSuggestedSkills, setAiSuggestedSkills] = useState<string[]>([]);
+  const [aiSkillsLoading, setAiSkillsLoading] = useState(true);
+
+  // TODO: Replace with real AI-generated skills once backend/API is ready.
+  useEffect(() => {
+    setAiSkillsLoading(true);
+    // Simulate API call for course "Intro to Computer Science"
+    const timer = setTimeout(() => {
+      setAiSuggestedSkills(["Algorithms", "Variables", "Loops"]);
+      setAiSkillsLoading(false);
+    }, 1200); // 1.2s delay
+    return () => clearTimeout(timer);
+  }, []);
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -365,6 +380,22 @@ const Dashboard: React.FC = () => {
         </div>
       </Card>
 
+      {/* AI-Suggested Skills (Test) - Temporary Section */}
+      <div className="mb-8">
+        <div className="bg-white rounded-lg shadow-sm px-6 py-6 flex flex-col text-left">
+          <h2 className="text-xl font-bold text-gray-900 mb-1">AI-Suggested Skills (Test)</h2>
+          <div className="mb-4 text-gray-500 text-sm">Course: <span className="font-medium text-gray-700">Intro to Computer Science</span></div>
+          {aiSkillsLoading ? (
+            <div className="text-gray-400 italic py-4">Loading suggestions...</div>
+          ) : (
+            <ul className="list-disc pl-4 text-gray-800 space-y-1">
+              {aiSuggestedSkills.map((skill, idx) => (
+                <li key={idx}>{skill}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card title="Recent Activity">
