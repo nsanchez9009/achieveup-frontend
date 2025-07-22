@@ -253,48 +253,38 @@ const SkillAssignmentInterface: React.FC = () => {
     }
   };
 
-  // Load questions when quiz changes
-  const loadQuestions = useCallback(async (quizId: string): Promise<void> => {
-    try {
-      // Use instructor-specific API if available
-      const response = isInstructor 
-        ? await canvasInstructorAPI.getInstructorQuestions(quizId)
-        : await canvasAPI.getQuestions(quizId);
-      
-      setQuestions(response.data);
-      setSelectedQuiz(quizId);
-      
-      // Initialize question skills
-      const initialSkills: QuestionSkills = {};
-      const initialStatus: AIAnalysisStatus = {};
-      const initialReviewStatus: HumanReviewStatus = {};
-      
-      response.data.forEach((question: CanvasQuestion) => {
-        initialSkills[question.id] = [];
-        initialStatus[question.id] = 'pending';
-        initialReviewStatus[question.id] = false;
-      });
-      
-      setQuestionSkills(initialSkills);
-      setAiAnalysisStatus(initialStatus);
-      setHumanReviewStatus(initialReviewStatus);
-      
-      // Auto-analyze questions if instructor
-      if (isInstructor && response.data.length > 0) {
-        const courseContext = courses.find(c => c.id === selectedCourse)?.name || '';
-        analyzeQuestionsWithAI(response.data, courseContext);
-      }
-    } catch (error) {
-      console.error('Error loading questions:', error);
-      toast.error('Failed to load questions');
-    }
-  }, [isInstructor, selectedCourse, courses, analyzeQuestionsWithAI]);
+  // Override loadQuestions to inject mock questions and tags
+  const loadQuestions = () => {
+    const dummyQuestions = [
+      { id: '1', question_text: "What is a binary tree?", quiz_id: 'mock-quiz' },
+      { id: '2', question_text: "Explain the difference between TCP and UDP.", quiz_id: 'mock-quiz' }
+    ];
 
+    const mockTagging = (question: string): string[] => {
+      if (question.includes("tree")) return ["Data Structures"];
+      if (question.includes("TCP")) return ["Networking"];
+      return ["Algorithms"];
+    };
+
+    setQuestions(dummyQuestions);
+    // Set suggestions as an object mapping questionId to string[]
+    const suggestionsObj: { [key: string]: string[] } = {};
+    dummyQuestions.forEach(q => {
+      suggestionsObj[q.id] = mockTagging(q.question_text);
+    });
+    setSuggestions(suggestionsObj);
+    // Optionally, set questionSkills as well
+    const skillsObj: { [key: string]: string[] } = {};
+    dummyQuestions.forEach(q => {
+      skillsObj[q.id] = mockTagging(q.question_text);
+    });
+    setQuestionSkills(skillsObj);
+  };
+
+  // Call loadQuestions on mount (no dropdown selection required)
   useEffect(() => {
-    if (watchedQuiz) {
-      loadQuestions(watchedQuiz);
-    }
-  }, [watchedQuiz, loadQuestions]);
+    loadQuestions();
+  }, []);
 
   const analyzeQuestionComplexity = (questionText: string): 'low' | 'medium' | 'high' => {
     const text = questionText.toLowerCase();
