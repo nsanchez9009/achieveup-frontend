@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { canvasInstructorAPI, instructorAPI } from '../services/api';
 import { CanvasCourse } from '../types';
 import Card from '../components/common/Card';
-import { Home, Target, Award, BarChart3, Users, TrendingUp, Brain, Settings } from 'lucide-react';
+import { Home, Target, Award, Users, TrendingUp, Brain, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -179,18 +179,11 @@ const Dashboard: React.FC = () => {
       color: 'bg-purple-500'
     },
     {
-      title: 'Student Analytics',
-      description: 'View detailed student progress and performance',
-      icon: BarChart3,
-      href: '/analytics',
-      color: 'bg-green-500'
-    },
-    {
-      title: 'Generate Badges',
-      description: 'Create web-linked badges for student achievements',
-      icon: Award,
-      href: '/badges',
-      color: 'bg-yellow-500'
+      title: 'Course Settings',
+      description: 'Manage Canvas integration and course settings',
+      icon: Settings,
+      href: '/settings',
+      color: 'bg-gray-500'
     }
   ];
 
@@ -204,18 +197,11 @@ const Dashboard: React.FC = () => {
       color: 'bg-green-500'
     },
     {
-      title: 'Earned Badges',
-      description: 'View your earned skill badges',
-      icon: Award,
-      href: '/badges',
-      color: 'bg-yellow-500'
-    },
-    {
-      title: 'Course Analytics',
-      description: 'Detailed analytics and insights',
-      icon: BarChart3,
-      href: '/analytics',
-      color: 'bg-blue-500'
+      title: 'Course Settings',
+      description: 'Manage Canvas integration and course settings',
+      icon: Settings,
+      href: '/settings',
+      color: 'bg-gray-500'
     }
   ];
 

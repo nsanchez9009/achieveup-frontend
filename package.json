@@ -31,6 +31,12 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:all": "npx ts-node src/test-utils/test-runner.ts all",
+    "test:suite": "npx ts-node src/test-utils/test-runner.ts suite",
+    "test:coverage": "npx ts-node src/test-utils/test-runner.ts coverage",
+    "test:performance": "npx ts-node src/test-utils/test-runner.ts performance",
+    "test:ci": "npm test -- --coverage --watchAll=false --testResultsProcessor=jest-sonar-reporter",
+    "test:debug": "react-scripts --inspect-brk test --runInBand --no-cache",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

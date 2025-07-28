@@ -35,4 +35,19 @@ Thumbs.db
 backend-implementation-guide.txt
 
 # Frontend status report (internal use only)
-FRONTEND-STATUS.md 
+FRONTEND-STATUS.md
+
+# Integration test guide (internal use only)
+INTEGRATION-TEST-GUIDE.md 
+
+# Backend implementation requirements (internal communication)
+BACKEND_IMPLEMENTATION_REQUIREMENTS.txt
+
+# Integration test guide (internal communication)
+INTEGRATION_TEST_GUIDE.txt
+
+# Final status update (internal communication)
+FINAL_STATUS_UPDATE.md
+
+# Comprehensive test report (internal documentation)
+COMPREHENSIVE_TEST_REPORT.md 

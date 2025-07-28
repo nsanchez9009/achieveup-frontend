@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Home, Target, Users, BarChart3, Settings, LogOut, User, Wifi, WifiOff } from 'lucide-react';
+import { Menu, X, Home, Target, Users, Settings, LogOut, User, Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface NavigationItem {
@@ -19,7 +19,6 @@ const Navigation: React.FC = () => {
     { name: 'Skill Matrix', href: '/skill-matrix', icon: Target },
     { name: 'Skill Assignment', href: '/skill-assignment', icon: Target },
     { name: 'Student Progress', href: '/progress', icon: Users },
-    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   ];
 
   const handleLogout = (): void => {
