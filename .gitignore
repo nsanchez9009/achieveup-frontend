@@ -29,4 +29,7 @@ yarn-error.log*
 *.swo
 
 # OS
-Thumbs.db 
+Thumbs.db
+
+# Backend implementation guide (internal use only)
+backend-implementation-guide.txt 
