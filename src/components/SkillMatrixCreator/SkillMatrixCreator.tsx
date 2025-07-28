@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Trash2, Save, Download, Upload, Settings, Layers, Target } from 'lucide-react';
+import { BookOpen, Brain, Save, Edit2, Trash2, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { skillMatrixAPI, canvasAPI } from '../../services/api';
-import { SkillMatrix, CanvasCourse } from '../../types';
+import { skillMatrixAPI, canvasInstructorAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { SkillMatrix } from '../../types';
 import Button from '../common/Button';
 import Card from '../common/Card';
 
@@ -12,221 +13,209 @@ interface SkillMatrixCreatorProps {
   onMatrixCreated?: (matrix: SkillMatrix) => void;
 }
 
-interface Skill {
+interface CanvasCourse {
+  id: string;
   name: string;
+  code: string;
   description?: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  dependencies?: string[];
-  category?: string;
-  weight?: number;
 }
 
-interface MatrixTemplate {
-  name: string;
+interface AISkillSuggestion {
+  skill: string;
+  relevance: number;
   description: string;
-  skills: Skill[];
 }
 
 const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({ 
   courseId, 
   onMatrixCreated 
 }) => {
-  const [skills, setSkills] = useState<Skill[]>([]);
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>(courseId || '');
+  const [selectedCourseData, setSelectedCourseData] = useState<CanvasCourse | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<AISkillSuggestion[]>([]);
+  const [finalSkills, setFinalSkills] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [newSkill, setNewSkill] = useState<Partial<Skill>>({
-    name: '',
-    description: '',
-    level: 'beginner',
-    category: '',
-    weight: 1
-  });
+  const [aiLoading, setAiLoading] = useState(false);
+  const [step, setStep] = useState<'select-course' | 'ai-suggestions' | 'review-skills'>('select-course');
+  const [editingSkill, setEditingSkill] = useState<number | null>(null);
+  const [newSkill, setNewSkill] = useState('');
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    reset,
-    watch
+    setValue
   } = useForm<{ matrixName: string; description?: string }>();
 
-  // Watch form values for debugging
-  const watchedValues = watch();
-  console.log('Current form values:', watchedValues); // Debug log
-
-  useEffect(() => {
-    loadCourses();
-  }, []);
-
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
     try {
-      const response = await canvasAPI.getCourses();
+      const response = await canvasInstructorAPI.getInstructorCourses();
       setCourses(response.data);
     } catch (error) {
       console.error('Error loading courses:', error);
+      toast.error('Failed to load courses');
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCourses();
+  }, [loadCourses]);
+
+  const handleCourseSelect = (courseId: string) => {
+    const course = courses.find(c => c.id === courseId);
+    setSelectedCourse(courseId);
+    setSelectedCourseData(course || null);
+    
+    if (course) {
+      // Auto-populate matrix name with course name
+      setValue('matrixName', `${course.name} - Skills Matrix`);
+      setStep('ai-suggestions');
     }
   };
 
-  // Predefined matrix templates
-  const matrixTemplates: MatrixTemplate[] = [
-    {
-      name: 'Web Development Fundamentals',
-      description: 'Core skills for modern web development',
-      skills: [
-        { name: 'HTML', description: 'Markup language for web pages', level: 'beginner', category: 'Frontend', weight: 1 },
-        { name: 'CSS', description: 'Styling and layout', level: 'beginner', category: 'Frontend', weight: 1 },
-        { name: 'JavaScript', description: 'Programming language for web', level: 'intermediate', category: 'Frontend', weight: 2 },
-        { name: 'React', description: 'Frontend framework', level: 'intermediate', category: 'Frontend', weight: 2 },
-        { name: 'Node.js', description: 'Backend runtime', level: 'intermediate', category: 'Backend', weight: 2 },
-        { name: 'TypeScript', description: 'Typed JavaScript', level: 'advanced', category: 'Frontend', weight: 3 }
-      ]
-    },
-    {
-      name: 'Data Science Essentials',
-      description: 'Skills for data analysis and machine learning',
-      skills: [
-        { name: 'Python', description: 'Programming language', level: 'beginner', category: 'Programming', weight: 1 },
-        { name: 'Pandas', description: 'Data manipulation', level: 'intermediate', category: 'Data Analysis', weight: 2 },
-        { name: 'NumPy', description: 'Numerical computing', level: 'intermediate', category: 'Data Analysis', weight: 2 },
-        { name: 'Matplotlib', description: 'Data visualization', level: 'intermediate', category: 'Visualization', weight: 2 },
-        { name: 'Scikit-learn', description: 'Machine learning', level: 'advanced', category: 'ML', weight: 3 },
-        { name: 'Deep Learning', description: 'Neural networks', level: 'advanced', category: 'ML', weight: 4 }
-      ]
-    },
-    {
-      name: 'Software Engineering',
-      description: 'Professional software development skills',
-      skills: [
-        { name: 'Git', description: 'Version control', level: 'beginner', category: 'Tools', weight: 1 },
-        { name: 'Testing', description: 'Unit and integration testing', level: 'intermediate', category: 'Quality', weight: 2 },
-        { name: 'CI/CD', description: 'Continuous integration', level: 'intermediate', category: 'DevOps', weight: 2 },
-        { name: 'System Design', description: 'Architecture patterns', level: 'advanced', category: 'Architecture', weight: 3 },
-        { name: 'Performance Optimization', description: 'Code optimization', level: 'advanced', category: 'Quality', weight: 3 }
-      ]
-    }
-  ];
-
-  const addSkill = () => {
-    if (!newSkill.name?.trim()) {
-      toast.error('Please enter a skill name');
+  const getAISkillSuggestions = async () => {
+    if (!selectedCourseData) {
+      toast.error('Please select a course first');
       return;
     }
 
-    if (skills.some(skill => skill.name.toLowerCase() === newSkill.name?.toLowerCase())) {
-      toast.error('Skill already exists');
-      return;
+    setAiLoading(true);
+    try {
+      // For now, use fallback since AI endpoint doesn't exist yet
+      const fallbackSkills = generateFallbackSkills(selectedCourseData);
+      setAiSuggestions(fallbackSkills);
+      
+      // Auto-select all AI suggestions as starting point
+      const suggestedSkills = fallbackSkills.map((s: AISkillSuggestion) => s.skill);
+      setFinalSkills(suggestedSkills);
+      
+      setStep('review-skills');
+      toast.success(`AI suggested ${fallbackSkills.length} skills for ${selectedCourseData.name}`);
+    } catch (error) {
+      console.error('Error getting AI suggestions:', error);
+      
+      // Fallback to manual skills based on course name/code
+      const fallbackSkills = generateFallbackSkills(selectedCourseData);
+      setAiSuggestions(fallbackSkills);
+      setFinalSkills(fallbackSkills.map((s: AISkillSuggestion) => s.skill));
+      setStep('review-skills');
+      
+      toast.error('AI suggestions failed. Using fallback skills. Please review and edit as needed.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const generateFallbackSkills = (course: CanvasCourse): AISkillSuggestion[] => {
+    const courseName = course.name.toLowerCase();
+    const courseCode = course.code.toLowerCase();
+    
+    // Basic skill mapping based on common course types
+    let skills: string[] = [];
+    
+    if (courseName.includes('programming') || courseName.includes('coding') || courseCode.includes('cop')) {
+      skills = [
+        'Problem Solving', 'Algorithm Design', 'Code Implementation', 'Debugging',
+        'Data Structures', 'Programming Logic', 'Code Documentation', 'Testing',
+        'Version Control', 'Code Review', 'Software Design', 'Error Handling'
+      ];
+    } else if (courseName.includes('data') || courseName.includes('analytics') || courseCode.includes('sta')) {
+      skills = [
+        'Data Analysis', 'Statistical Reasoning', 'Data Visualization', 'Data Cleaning',
+        'Statistical Methods', 'Data Interpretation', 'Research Methods', 'Hypothesis Testing',
+        'Data Collection', 'Report Writing', 'Critical Thinking', 'Quantitative Analysis'
+      ];
+    } else if (courseName.includes('web') || courseName.includes('internet')) {
+      skills = [
+        'HTML/CSS', 'JavaScript', 'Web Design', 'User Experience',
+        'Responsive Design', 'Front-end Development', 'Back-end Development', 'Database Integration',
+        'Web Security', 'Performance Optimization', 'API Integration', 'Testing'
+      ];
+    } else if (courseName.includes('database') || courseCode.includes('cda')) {
+      skills = [
+        'Database Design', 'SQL Queries', 'Data Modeling', 'Normalization',
+        'Query Optimization', 'Database Administration', 'Data Integrity', 'Backup/Recovery',
+        'Index Management', 'Stored Procedures', 'Data Security', 'Performance Tuning'
+      ];
+    } else {
+      // Generic academic skills
+      skills = [
+        'Critical Thinking', 'Problem Solving', 'Communication', 'Research',
+        'Analysis', 'Synthesis', 'Evaluation', 'Application',
+        'Collaboration', 'Time Management', 'Project Management', 'Presentation'
+      ];
     }
 
-    const skillToAdd = {
-      name: newSkill.name!,
-      description: newSkill.description || '',
-      level: newSkill.level || 'beginner',
-      category: newSkill.category?.trim() || 'General',
-      weight: newSkill.weight || 1,
-      dependencies: newSkill.dependencies || []
-    };
+    return skills.slice(0, 12).map((skill, index) => ({
+      skill,
+      relevance: 0.9 - (index * 0.05),
+      description: `${skill} relevant to ${course.name}`
+    }));
+  };
 
-    console.log('Adding skill:', skillToAdd); // Debug log
+  const toggleSkill = (skill: string) => {
+    setFinalSkills(prev => 
+      prev.includes(skill) 
+        ? prev.filter(s => s !== skill)
+        : [...prev, skill]
+    );
+  };
 
-    setSkills(prev => [...prev, skillToAdd]);
-
-    setNewSkill({
-      name: '',
-      description: '',
-      level: 'beginner',
-      category: '',
-      weight: 1
-    });
-
-    toast.success('Skill added successfully');
+  const editSkill = (index: number, newValue: string) => {
+    if (newValue.trim()) {
+      setFinalSkills(prev => 
+        prev.map((skill, i) => i === index ? newValue.trim() : skill)
+      );
+    }
+    setEditingSkill(null);
   };
 
   const removeSkill = (index: number) => {
-    setSkills(prev => prev.filter((_, i) => i !== index));
-    toast.success('Skill removed');
+    setFinalSkills(prev => prev.filter((_, i) => i !== index));
   };
 
-  const loadTemplate = (template: MatrixTemplate) => {
-    setSkills(template.skills);
-    setShowTemplates(false);
-    toast.success(`Loaded ${template.name} template`);
-  };
-
-  const exportMatrix = () => {
-    const matrixData = {
-      name: 'Skill Matrix',
-      skills: skills,
-      exportDate: new Date().toISOString()
-    };
-
-    const dataStr = JSON.stringify(matrixData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `skill-matrix-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast.success('Matrix exported successfully');
-  };
-
-  const importMatrix = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target?.result as string);
-        if (data.skills && Array.isArray(data.skills)) {
-          setSkills(data.skills);
-          toast.success('Matrix imported successfully');
-        } else {
-          toast.error('Invalid matrix file format');
-        }
-      } catch (error) {
-        toast.error('Error parsing matrix file');
-      }
-    };
-    reader.readAsText(file);
+  const addCustomSkill = () => {
+    if (newSkill.trim() && !finalSkills.includes(newSkill.trim())) {
+      setFinalSkills(prev => [...prev, newSkill.trim()]);
+      setNewSkill('');
+    }
   };
 
   const onSubmit = async (data: { matrixName: string; description?: string }) => {
-    console.log('Form submitted with data:', data); // Debug log
-    console.log('Form errors:', errors); // Debug log
-    console.log('Selected course:', selectedCourse); // Debug log
-    console.log('Skills count:', skills.length); // Debug log
-    
     if (!selectedCourse) {
       toast.error('Please select a course');
       return;
     }
 
-    if (skills.length === 0) {
+    if (finalSkills.length === 0) {
       toast.error('Please add at least one skill');
-      return;
-    }
-
-    if (!data.matrixName?.trim()) {
-      toast.error('Matrix name is required');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await skillMatrixAPI.create({
+      const matrixData = {
         course_id: selectedCourse,
         matrix_name: data.matrixName,
-        skills: skills.map(skill => skill.name)
-      });
+        skills: finalSkills,
+        ai_suggested_skills: aiSuggestions.map(s => s.skill),
+        description: data.description
+      };
 
-      toast.success('Skill matrix created successfully!');
+      const response = await skillMatrixAPI.create(matrixData);
+      
       onMatrixCreated?.(response.data);
-      reset();
-      setSkills([]);
+      toast.success('Skill matrix created successfully!');
+      
+      // Reset form
+      setStep('select-course');
+      setSelectedCourse('');
+      setSelectedCourseData(null);
+      setAiSuggestions([]);
+      setFinalSkills([]);
+      setValue('matrixName', '');
+      setValue('description', '');
     } catch (error) {
       console.error('Error creating skill matrix:', error);
       toast.error('Failed to create skill matrix');
@@ -235,315 +224,244 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
     }
   };
 
-  const getSkillCategories = () => {
-    const categories = skills.map(skill => skill.category || 'General').filter((category): category is string => Boolean(category));
-    return ['All', ...Array.from(new Set(categories))];
-  };
-
-  const getSkillsByCategory = (category: string) => {
-    if (category === 'All') return skills;
-    return skills.filter(skill => (skill.category || 'General') === category);
-  };
-
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6">
       <Card
-        title="Skill Matrix Creator"
-        subtitle="Create comprehensive skill matrices for course assessment"
+        title="AI-Powered Skill Matrix Creator"
+        subtitle="Select a course and let AI suggest relevant skills, then customize as needed"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Course Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Course
-            </label>
-            <select
-              value={selectedCourse}
-              onChange={(e) => setSelectedCourse(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              required
-            >
-              <option value="">Select a course</option>
-              {courses.map(course => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Matrix Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Step 1: Course Selection */}
+          {step === 'select-course' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Matrix Name
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., Web Development Skills"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  errors.matrixName ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
-                }`}
-                {...register('matrixName', { required: 'Matrix name is required' })}
-              />
-              {errors.matrixName && (
-                <p className="mt-1 text-sm text-red-600">{errors.matrixName.message}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="Brief description of the skill matrix"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                {...register('description')}
-              />
-            </div>
-          </div>
-
-          {/* Template and Import/Export */}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowTemplates(!showTemplates)}
-            >
-              <Layers className="w-4 h-4 mr-2" />
-              Templates
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={exportMatrix}
-              disabled={skills.length === 0}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept=".json"
-                onChange={importMatrix}
-                className="hidden"
-              />
-              <Button type="button" variant="outline" size="sm">
-                <Upload className="w-4 h-4 mr-2" />
-                Import
-              </Button>
-            </label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Advanced
-            </Button>
-          </div>
-
-          {/* Templates Modal */}
-          {showTemplates && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-medium mb-4">Choose a Template</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {matrixTemplates.map((template, index) => (
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
+                Step 1: Select Course
+              </h3>
+              
+              <div className="grid grid-cols-1 gap-4">
+                {courses.map(course => (
                   <div
-                    key={index}
-                    className="bg-white p-4 rounded-lg border cursor-pointer hover:border-primary-300 transition-colors"
-                    onClick={() => loadTemplate(template)}
+                    key={course.id}
+                    onClick={() => handleCourseSelect(course.id)}
+                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all duration-200"
                   >
-                    <h4 className="font-medium text-gray-900 mb-2">{template.name}</h4>
-                    <p className="text-sm text-gray-600 mb-3">{template.description}</p>
-                    <div className="text-xs text-gray-500">
-                      {template.skills.length} skills • {template.skills.filter(s => s.level === 'advanced').length} advanced
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium text-gray-900">{course.name}</h4>
+                        <p className="text-sm text-gray-600">{course.code}</p>
+                        {course.description && (
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{course.description}</p>
+                        )}
+                      </div>
+                      <CheckCircle className="w-5 h-5 text-green-500 opacity-0 group-hover:opacity-100" />
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
 
-          {/* Add New Skill */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-medium mb-4">Add New Skill</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Skill Name
-                </label>
-                              <input
-                type="text"
-                value={newSkill.name || ''}
-                onChange={(e) => setNewSkill(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="e.g., JavaScript"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Level
-                </label>
-                <select
-                  value={newSkill.level}
-                  onChange={(e) => setNewSkill(prev => ({ ...prev, level: e.target.value as any }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
-                </label>
-                <input
-                  type="text"
-                  value={newSkill.category}
-                  onChange={(e) => setNewSkill(prev => ({ ...prev, category: e.target.value }))}
-                  placeholder="e.g., Frontend"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button type="button" onClick={addSkill} className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Skill
-                </Button>
-              </div>
-            </div>
-            {showAdvanced && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <input
-                    type="text"
-                    value={newSkill.description}
-                    onChange={(e) => setNewSkill(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Skill description"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Weight
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="5"
-                    value={newSkill.weight?.toString() || ''}
-                    onChange={(e) => setNewSkill(prev => ({ ...prev, weight: e.target.value ? parseInt(e.target.value) : undefined }))}
-                    placeholder="1-5"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Skills List */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Skills ({skills.length})</h3>
-              {skills.length > 0 && (
-                <div className="text-sm text-gray-500">
-                  {skills.filter(s => s.level === 'beginner').length} beginner • 
-                  {skills.filter(s => s.level === 'intermediate').length} intermediate • 
-                  {skills.filter(s => s.level === 'advanced').length} advanced
+              {courses.length === 0 && (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No courses found. Please check your Canvas integration.</p>
                 </div>
               )}
             </div>
+          )}
 
-            {skills.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 rounded-lg">
-                <Target className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600">No skills added yet. Add skills or load a template to get started.</p>
+          {/* Step 2: AI Suggestions */}
+          {step === 'ai-suggestions' && selectedCourseData && (
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Brain className="w-5 h-5 mr-2 text-purple-600" />
+                Step 2: Get AI Skill Suggestions
+              </h3>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h4 className="font-medium text-blue-900 mb-2">Selected Course</h4>
+                <p className="text-blue-800">{selectedCourseData.name}</p>
+                <p className="text-sm text-blue-600">{selectedCourseData.code}</p>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {(() => {
-                  const categories = getSkillCategories();
-                  console.log('Categories:', categories); // Debug log
-                  console.log('All skills:', skills); // Debug log
-                  
-                  return categories.map(category => {
-                    const categorySkills = getSkillsByCategory(category);
-                    console.log(`Skills for category "${category}":`, categorySkills); // Debug log
-                    
-                    if (categorySkills.length === 0) return null;
-                    
-                    return (
-                      <div key={category} className="bg-white border rounded-lg">
-                        <div className="px-4 py-2 bg-gray-50 border-b">
-                          <h4 className="font-medium text-gray-700">{category} ({categorySkills.length} skills)</h4>
-                        </div>
-                        <div className="p-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {categorySkills.map((skill, index) => (
-                              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div className="flex-1">
-                                  <div className="font-medium text-gray-900">{skill.name}</div>
-                                  <div className="text-sm text-gray-600">{skill.description}</div>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      skill.level === 'beginner' ? 'bg-green-100 text-green-800' :
-                                      skill.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                                      'bg-red-100 text-red-800'
-                                    }`}>
-                                      {skill.level}
-                                    </span>
-                                    <span className="text-xs text-gray-500">Category: {skill.category || 'General'}</span>
-                                    {skill.weight && skill.weight > 1 && (
-                                      <span className="text-xs text-gray-500">Weight: {skill.weight}</span>
-                                    )}
-                                  </div>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => removeSkill(skills.indexOf(skill))}
-                                  className="ml-2"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            )}
-          </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end">
-            <div className="text-sm text-gray-500 mb-2">
-              Debug: Course selected: {selectedCourse ? 'Yes' : 'No'}, Skills count: {skills.length}
-              <br />
-              Matrix name: "{watchedValues.matrixName || 'empty'}" | Errors: {Object.keys(errors).length}
+              <div className="text-center">
+                <p className="text-gray-600 mb-4">
+                  Our AI will analyze "{selectedCourseData.name}" and suggest 10-12 relevant skills 
+                  that students should develop in this course.
+                </p>
+                
+                <Button
+                  type="button"
+                  onClick={getAISkillSuggestions}
+                  loading={aiLoading}
+                  disabled={aiLoading}
+                  className="flex items-center"
+                >
+                  <Brain className="w-4 h-4 mr-2" />
+                  {aiLoading ? 'Getting AI Suggestions...' : 'Get AI Skill Suggestions'}
+                </Button>
+              </div>
             </div>
-            <Button
-              type="submit"
-              loading={loading}
-              disabled={!selectedCourse || skills.length === 0}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Create Skill Matrix
-            </Button>
-          </div>
+          )}
+
+          {/* Step 3: Review and Edit Skills */}
+          {step === 'review-skills' && (
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Edit2 className="w-5 h-5 mr-2 text-green-600" />
+                Step 3: Review and Customize Skills
+              </h3>
+
+              {/* Matrix Name */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Matrix Name
+                </label>
+                <input
+                  {...register('matrixName', { required: 'Matrix name is required' })}
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Web Development - Skills Matrix"
+                />
+                {errors.matrixName && (
+                  <p className="text-red-600 text-sm mt-1">{errors.matrixName.message}</p>
+                )}
+              </div>
+
+              {/* AI Suggested Skills */}
+              <div className="mb-6">
+                <h4 className="font-medium text-gray-900 mb-3">
+                  AI Suggested Skills ({aiSuggestions.length} skills)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {aiSuggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      onClick={() => toggleSkill(suggestion.skill)}
+                      className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                        finalSkills.includes(suggestion.skill)
+                          ? 'border-green-300 bg-green-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-900">{suggestion.skill}</span>
+                        <CheckCircle className={`w-4 h-4 ${
+                          finalSkills.includes(suggestion.skill)
+                            ? 'text-green-600'
+                            : 'text-gray-300'
+                        }`} />
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1">{suggestion.description}</p>
+                      <div className="mt-2">
+                        <div className="w-full bg-gray-200 rounded-full h-1">
+                          <div 
+                            className="bg-blue-500 h-1 rounded-full"
+                            style={{ width: `${suggestion.relevance * 100}%` }}
+                          ></div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Relevance: {Math.round(suggestion.relevance * 100)}%
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Final Skills List */}
+              <div className="mb-6">
+                <h4 className="font-medium text-gray-900 mb-3">
+                  Final Skills List ({finalSkills.length} skills)
+                </h4>
+                <div className="space-y-2">
+                  {finalSkills.map((skill, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                      {editingSkill === index ? (
+                        <input
+                          type="text"
+                          defaultValue={skill}
+                          autoFocus
+                          onBlur={(e) => editSkill(index, e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              editSkill(index, (e.target as HTMLInputElement).value);
+                            }
+                          }}
+                          className="flex-1 px-2 py-1 border border-gray-300 rounded"
+                        />
+                      ) : (
+                        <span 
+                          className="flex-1 cursor-pointer hover:text-blue-600"
+                          onClick={() => setEditingSkill(index)}
+                        >
+                          {skill}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setEditingSkill(index)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeSkill(index)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Custom Skill */}
+                <div className="flex gap-2 mt-4">
+                  <input
+                    type="text"
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    placeholder="Add custom skill..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addCustomSkill();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    onClick={addCustomSkill}
+                    disabled={!newSkill.trim()}
+                    variant="outline"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Navigation Buttons */}
+              <div className="flex justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep('ai-suggestions')}
+                >
+                  Back to Course Selection
+                </Button>
+                
+                <Button
+                  type="submit"
+                  loading={loading}
+                  disabled={loading || finalSkills.length === 0}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Create Skill Matrix
+                </Button>
+              </div>
+            </div>
+          )}
         </form>
       </Card>
     </div>

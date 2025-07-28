@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Home, Target, Award, BarChart3, Settings, LogOut, User, Wifi, WifiOff } from 'lucide-react';
+import { Menu, X, Home, Target, Users, BarChart3, Settings, LogOut, User, Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface NavigationItem {
@@ -18,8 +18,7 @@ const Navigation: React.FC = () => {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Skill Matrix', href: '/skill-matrix', icon: Target },
     { name: 'Skill Assignment', href: '/skill-assignment', icon: Target },
-    { name: 'Badges', href: '/badges', icon: Award },
-    { name: 'Progress', href: '/progress', icon: BarChart3 },
+    { name: 'Student Progress', href: '/progress', icon: Users },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   ];
 
@@ -38,6 +37,7 @@ const Navigation: React.FC = () => {
                 <span className="text-ucf-black font-bold text-lg">A</span>
               </div>
               <span className="ml-2 text-xl font-bold text-gray-900">AchieveUp</span>
+              <span className="ml-2 text-sm text-gray-500 hidden lg:inline">Instructor Portal</span>
             </Link>
 
             {/* Desktop Navigation */}
@@ -71,12 +71,18 @@ const Navigation: React.FC = () => {
               {/* Backend Status Indicator */}
               <div className="flex items-center space-x-1">
                 {backendAvailable ? (
-                  <div title="Backend connected">
+                  <div className="relative group">
                     <Wifi className="w-4 h-4 text-green-500" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      Backend connected
+                    </div>
                   </div>
                 ) : (
-                  <div title="Backend unavailable">
+                  <div className="relative group">
                     <WifiOff className="w-4 h-4 text-red-500" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      Backend unavailable
+                    </div>
                   </div>
                 )}
               </div>
@@ -85,9 +91,12 @@ const Navigation: React.FC = () => {
                 <User className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 <span 
                   className="text-sm text-gray-700 max-w-32 truncate cursor-help" 
-                  title={user?.name || user?.email || 'User'}
+                  title={user?.name || user?.email || 'Instructor'}
                 >
-                  {user?.name || user?.email || 'User'}
+                  {user?.name || user?.email || 'Instructor'}
+                </span>
+                <span className="text-xs text-ucf-gold bg-ucf-gold bg-opacity-10 px-2 py-1 rounded-full">
+                  Instructor
                 </span>
               </div>
               <Link
@@ -130,17 +139,16 @@ const Navigation: React.FC = () => {
             {/* Mobile Backend Status */}
             <div className="flex items-center px-3 py-2">
               {backendAvailable ? (
-                <div title="Backend connected">
+                <div className="flex items-center">
                   <Wifi className="w-5 h-5 text-green-500 mr-3" />
+                  <span className="text-sm text-gray-600">Backend connected</span>
                 </div>
               ) : (
-                <div title="Backend unavailable">
+                <div className="flex items-center">
                   <WifiOff className="w-5 h-5 text-red-500 mr-3" />
+                  <span className="text-sm text-gray-600">Backend unavailable</span>
                 </div>
               )}
-              <span className="text-sm text-gray-600">
-                {backendAvailable ? 'Backend connected' : 'Backend unavailable'}
-              </span>
             </div>
             
             {navigationItems.map((item) => {
@@ -168,9 +176,12 @@ const Navigation: React.FC = () => {
             <div className="border-t border-gray-200 pt-4 mt-4">
               <div className="flex items-center px-3 py-2">
                 <User className="w-5 h-5 text-gray-500 mr-3" />
-                <span className="text-sm text-gray-700">
-                  {user?.name || user?.email || 'User'}
-                </span>
+                <div>
+                  <div className="text-sm text-gray-700">
+                    {user?.name || user?.email || 'Instructor'}
+                  </div>
+                  <div className="text-xs text-ucf-gold">Instructor Portal</div>
+                </div>
               </div>
               <Link
                 to="/settings"

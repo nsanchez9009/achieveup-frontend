@@ -3,9 +3,9 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'instructor' | 'admin';
+  role: 'instructor' | 'admin';
   hasCanvasToken?: boolean;
-  canvasTokenType?: 'student' | 'instructor';
+  canvasTokenType: 'instructor';
   canvas_token_created_at?: string;
   canvas_token_last_validated?: string;
 }
@@ -14,20 +14,20 @@ export interface SignupRequest {
   name: string;
   email: string;
   password: string;
-  canvasApiToken?: string;
-  canvasTokenType?: 'student' | 'instructor';
+  canvasApiToken: string;
+  canvasTokenType: 'instructor';
 }
 
 export interface ProfileUpdateRequest {
   name?: string;
   email?: string;
   canvasApiToken?: string;
-  canvasTokenType?: 'student' | 'instructor';
+  canvasTokenType?: 'instructor';
 }
 
 export interface CanvasTokenValidationRequest {
   canvasApiToken: string;
-  canvasTokenType: 'student' | 'instructor';
+  canvasTokenType: 'instructor';
 }
 
 // Skill Matrix Types

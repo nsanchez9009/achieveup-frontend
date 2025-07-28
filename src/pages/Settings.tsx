@@ -15,11 +15,11 @@ const Settings: React.FC = () => {
   const [validatingToken, setValidatingToken] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; message?: string } | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
+  const [profile, setProfile] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
     canvasApiToken: '',
-    canvasTokenType: 'student' as 'student' | 'instructor',
+    canvasTokenType: 'instructor' as const,
     currentPassword: '',
     newPassword: '',
     confirmNewPassword: ''
@@ -27,18 +27,18 @@ const Settings: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      setFormData(prev => ({
+      setProfile(prev => ({
         ...prev,
         name: user.name || '',
         email: user.email || '',
         canvasApiToken: '',
-        canvasTokenType: user.canvasTokenType || 'student'
+        canvasTokenType: user.canvasTokenType || 'instructor'
       }));
     }
   }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
+    setProfile(prev => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
@@ -47,13 +47,13 @@ const Settings: React.FC = () => {
   // Profile update
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email) {
+    if (!profile.name || !profile.email) {
       toast.error('Please fill in all required fields');
       return;
     }
     setLoading(true);
     try {
-      await authAPI.updateProfile({ name: formData.name, email: formData.email });
+      await authAPI.updateProfile({ name: profile.name, email: profile.email });
       await refreshUser();
       toast.success('Profile updated successfully!');
       setIsEditingProfile(false);
@@ -65,7 +65,7 @@ const Settings: React.FC = () => {
   };
 
   // Validate Canvas API token
-  const handleValidateToken = async (token: string, tokenType: 'student' | 'instructor') => {
+  const handleValidateToken = async (token: string, tokenType: 'instructor') => {
     setValidatingToken(true);
     try {
       const response = await authAPI.validateCanvasToken({ 
@@ -109,7 +109,7 @@ const Settings: React.FC = () => {
   // Canvas API token update
   const handleUpdateToken = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!formData.canvasApiToken) {
+    if (!profile.canvasApiToken) {
       toast.error('Please enter a Canvas API token');
       return;
     }
@@ -117,7 +117,7 @@ const Settings: React.FC = () => {
     setLoading(true);
     try {
       // First validate the token
-      const isValid = await handleValidateToken(formData.canvasApiToken, formData.canvasTokenType);
+      const isValid = await handleValidateToken(profile.canvasApiToken, profile.canvasTokenType);
       if (!isValid) {
         setLoading(false);
         return;
@@ -127,13 +127,13 @@ const Settings: React.FC = () => {
       await authAPI.updateProfile({
         name: user?.name || '',
         email: user?.email || '',
-        canvasApiToken: formData.canvasApiToken,
-        canvasTokenType: formData.canvasTokenType
+        canvasApiToken: profile.canvasApiToken,
+        canvasTokenType: profile.canvasTokenType
       });
       await refreshUser();
-      toast.success(`Canvas API ${formData.canvasTokenType} token updated successfully!`);
+      toast.success(`Canvas API ${profile.canvasTokenType} token updated successfully!`);
       setIsEditingToken(false);
-      setFormData(prev => ({ ...prev, canvasApiToken: '' }));
+      setProfile(prev => ({ ...prev, canvasApiToken: '' }));
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update Canvas API Token');
     } finally {
@@ -152,7 +152,7 @@ const Settings: React.FC = () => {
         canvasApiToken: ''
       });
       await refreshUser();
-      setFormData(prev => ({ ...prev, canvasApiToken: '' }));
+      setProfile(prev => ({ ...prev, canvasApiToken: '' }));
       setIsEditingToken(false);
       setConnectionStatus(null);
       toast.success('Canvas API Token cleared!');
@@ -166,26 +166,26 @@ const Settings: React.FC = () => {
   // Password change
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.currentPassword || !formData.newPassword || !formData.confirmNewPassword) {
+    if (!profile.currentPassword || !profile.newPassword || !profile.confirmNewPassword) {
       toast.error('Please fill in all password fields');
       return;
     }
-    if (formData.newPassword !== formData.confirmNewPassword) {
+    if (profile.newPassword !== profile.confirmNewPassword) {
       toast.error('New passwords do not match');
       return;
     }
-    if (formData.newPassword.length < 6) {
+    if (profile.newPassword.length < 6) {
       toast.error('New password must be at least 6 characters long');
       return;
     }
     setLoading(true);
     try {
       await authAPI.changePassword({
-        currentPassword: formData.currentPassword,
-        newPassword: formData.newPassword
+        currentPassword: profile.currentPassword,
+        newPassword: profile.newPassword
       });
       toast.success('Password changed successfully!');
-      setFormData(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmNewPassword: '' }));
+      setProfile(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmNewPassword: '' }));
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to change password');
     } finally {
@@ -200,18 +200,18 @@ const Settings: React.FC = () => {
         <Info className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
         <div className="text-sm text-blue-800">
           <p className="font-medium mb-2">
-            How to get your Canvas API {formData.canvasTokenType === 'instructor' ? 'Instructor' : 'Student'} Token:
+            How to get your Canvas API {profile.canvasTokenType === 'instructor' ? 'Instructor' : 'Student'} Token:
           </p>
           <ol className="list-decimal list-inside space-y-1">
             <li>Log into your Canvas account</li>
             <li>Go to Account → Settings</li>
             <li>Scroll down to "Approved Integrations"</li>
             <li>Click "New Access Token"</li>
-            <li>Give it a name (e.g., "AchieveUp {formData.canvasTokenType === 'instructor' ? 'Instructor' : 'Student'}")</li>
+            <li>Give it a name (e.g., "AchieveUp {profile.canvasTokenType === 'instructor' ? 'Instructor' : 'Student'}")</li>
             <li>Copy the generated token and paste it above</li>
           </ol>
           
-          {formData.canvasTokenType === 'instructor' && (
+          {profile.canvasTokenType === 'instructor' && (
             <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
               <p className="text-xs font-medium text-yellow-800 mb-1">Instructor Token Benefits:</p>
               <ul className="text-xs text-yellow-700 space-y-1">
@@ -232,7 +232,7 @@ const Settings: React.FC = () => {
               </p>
             ) : (
               <p className="text-xs text-orange-600">
-                ⚠️ No token set - {formData.canvasTokenType === 'instructor' ? 'instructor features' : 'courses'} won't load until you add one
+                ⚠️ No token set - {profile.canvasTokenType === 'instructor' ? 'instructor features' : 'courses'} won't load until you add one
               </p>
             )}
           </div>
@@ -281,15 +281,15 @@ const Settings: React.FC = () => {
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700">Full Name *</label>
-                  <Input name="name" type="text" value={formData.name} onChange={handleChange} placeholder="Enter your full name" required />
+                  <Input name="name" type="text" value={profile.name} onChange={handleChange} placeholder="Enter your full name" required />
                 </div>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address *</label>
-                  <Input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="your.email@example.com" required />
+                  <Input name="email" type="email" value={profile.email} onChange={handleChange} placeholder="your.email@example.com" required />
                 </div>
                 <div className="flex gap-3 pt-4">
                   <Button type="submit" loading={loading} disabled={loading}><Save className="w-4 h-4 mr-2" />Save</Button>
-                  <Button type="button" variant="outline" onClick={() => { setIsEditingProfile(false); if (user) setFormData(prev => ({ ...prev, name: user.name || '', email: user.email || '' })); }} disabled={loading}>Cancel</Button>
+                  <Button type="button" variant="outline" onClick={() => { setIsEditingProfile(false); if (user) setProfile(prev => ({ ...prev, name: user.name || '', email: user.email || '' })); }} disabled={loading}>Cancel</Button>
                 </div>
               </form>
             )}
@@ -358,29 +358,19 @@ const Settings: React.FC = () => {
                 {/* Token Type Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Token Type</label>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="canvasTokenType"
-                        value="student"
-                        checked={formData.canvasTokenType === 'student'}
-                        onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-700">Student Token</span>
-                    </label>
-                    <label className="flex items-center">
+                  <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                    <div className="flex items-center">
                       <input
                         type="radio"
                         name="canvasTokenType"
                         value="instructor"
-                        checked={formData.canvasTokenType === 'instructor'}
-                        onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
+                        checked={true}
+                        readOnly
                         className="mr-2"
                       />
-                      <span className="text-sm text-gray-700">Instructor Token</span>
-                    </label>
+                      <span className="text-sm font-medium text-blue-800">Instructor Token (Required)</span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">This application is for instructors only</p>
                   </div>
                 </div>
                 
@@ -389,7 +379,7 @@ const Settings: React.FC = () => {
                   <Input
                     name="canvasApiToken"
                     type="text"
-                    value={formData.canvasApiToken}
+                    value={profile.canvasApiToken}
                     onChange={handleChange}
                     placeholder="Paste your Canvas API token"
                     className="pl-10"
@@ -412,29 +402,19 @@ const Settings: React.FC = () => {
                 {/* Token Type Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Token Type</label>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="canvasTokenType"
-                        value="student"
-                        checked={formData.canvasTokenType === 'student'}
-                        onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-700">Student Token</span>
-                    </label>
-                    <label className="flex items-center">
+                  <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                    <div className="flex items-center">
                       <input
                         type="radio"
                         name="canvasTokenType"
                         value="instructor"
-                        checked={formData.canvasTokenType === 'instructor'}
-                        onChange={(e) => setFormData(prev => ({ ...prev, canvasTokenType: e.target.value as 'student' | 'instructor' }))}
+                        checked={true}
+                        readOnly
                         className="mr-2"
                       />
-                      <span className="text-sm text-gray-700">Instructor Token</span>
-                    </label>
+                      <span className="text-sm font-medium text-blue-800">Instructor Token (Required)</span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">This application is for instructors only</p>
                   </div>
                 </div>
                 
@@ -443,7 +423,7 @@ const Settings: React.FC = () => {
                   <Input
                     name="canvasApiToken"
                     type="text"
-                    value={formData.canvasApiToken}
+                    value={profile.canvasApiToken}
                     onChange={handleChange}
                     placeholder="Paste your Canvas API token"
                     className="pl-10"
@@ -458,7 +438,7 @@ const Settings: React.FC = () => {
                     <Save className="w-4 h-4 mr-2" />
                     {validatingToken ? 'Validating...' : 'Save'}
                   </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => { setIsEditingToken(false); setFormData(prev => ({ ...prev, canvasApiToken: '' })); }} disabled={loading}>Cancel</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setIsEditingToken(false); setProfile(prev => ({ ...prev, canvasApiToken: '' })); }} disabled={loading}>Cancel</Button>
                 </div>
               </form>
             ) : (
@@ -468,7 +448,7 @@ const Settings: React.FC = () => {
                   <div>
                     <span className="text-gray-500">••••••••••••••••••••••••••••••••</span>
                     <p className="text-xs text-gray-400 mt-1">
-                      {user.canvasTokenType === 'instructor' ? 'Instructor Token' : 'Student Token'} - stored securely
+                      {profile.canvasTokenType === 'instructor' ? 'Instructor Token' : 'Student Token'} - stored securely
                     </p>
                   </div>
                 </div>
@@ -495,15 +475,15 @@ const Settings: React.FC = () => {
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
                 <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">Current Password *</label>
-                <Input name="currentPassword" type="password" value={formData.currentPassword} onChange={handleChange} placeholder="Enter your current password" required />
+                <Input name="currentPassword" type="password" value={profile.currentPassword} onChange={handleChange} placeholder="Enter your current password" required />
               </div>
               <div>
                 <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">New Password *</label>
-                <Input name="newPassword" type="password" value={formData.newPassword} onChange={handleChange} placeholder="Enter your new password" required />
+                <Input name="newPassword" type="password" value={profile.newPassword} onChange={handleChange} placeholder="Enter your new password" required />
               </div>
               <div>
                 <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-gray-700">Confirm New Password *</label>
-                <Input name="confirmNewPassword" type="password" value={formData.confirmNewPassword} onChange={handleChange} placeholder="Confirm your new password" required />
+                <Input name="confirmNewPassword" type="password" value={profile.confirmNewPassword} onChange={handleChange} placeholder="Confirm your new password" required />
               </div>
               <Button type="submit" loading={loading} disabled={loading}>Change Password</Button>
             </form>

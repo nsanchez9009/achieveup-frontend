@@ -10,8 +10,6 @@ import Settings from './pages/Settings';
 import './index.css';
 import SkillMatrixCreator from './components/SkillMatrixCreator/SkillMatrixCreator';
 import SkillAssignmentInterface from './components/SkillAssignmentInterface/SkillAssignmentInterface';
-import BadgeDisplaySystem from './components/BadgeDisplaySystem/BadgeDisplaySystem';
-import ProgressDashboard from './components/ProgressDashboard/ProgressDashboard';
 import AnalyticsDashboard from './components/AnalyticsDashboard/AnalyticsDashboard';
 
 // Protected Route Component
@@ -31,6 +29,26 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   return <>{children}</>;
+};
+
+// Student Progress Component (placeholder for now)
+const StudentProgress: React.FC = () => {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Student Progress</h2>
+        <p className="text-gray-600">
+          View and track individual student progress across all skills and courses.
+        </p>
+        <div className="mt-8 p-8 bg-blue-50 rounded-lg">
+          <p className="text-blue-800">
+            This section will show detailed student progress tracking once the skill matrices 
+            and assignments are set up.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const AppRoutes: React.FC = () => {
@@ -63,24 +81,17 @@ const AppRoutes: React.FC = () => {
           </Layout>
         </ProtectedRoute>
       } />
-      <Route path="/badges" element={
-        <ProtectedRoute>
-          <Layout>
-            <BadgeDisplaySystem studentId="demo-student-123" />
-          </Layout>
-        </ProtectedRoute>
-      } />
       <Route path="/progress" element={
         <ProtectedRoute>
           <Layout>
-            <ProgressDashboard studentId="demo-student-123" courseId="demo-course-456" />
+            <StudentProgress />
           </Layout>
         </ProtectedRoute>
       } />
       <Route path="/analytics" element={
         <ProtectedRoute>
           <Layout>
-            <AnalyticsDashboard courseId="demo-course-456" />
+            <AnalyticsDashboard courseId="default" />
           </Layout>
         </ProtectedRoute>
       } />

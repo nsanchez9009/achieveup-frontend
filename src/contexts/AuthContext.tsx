@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, SignupRequest } from '../types';
 import { authAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import { User, SignupRequest } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -33,78 +32,84 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [backendAvailable, setBackendAvailable] = useState(true);
 
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
+  // Check authentication status on app load
   const checkAuthStatus = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        // Verify token with backend
-        const response = await authAPI.verify();
-        setUser(response.data.user);
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setUser(null);
         setBackendAvailable(true);
+        return;
       }
+
+      // Verify token and get user info
+      const response = await authAPI.me();
+      const userData = response.data.user || response.data;
+      
+      // Only allow instructors
+      if (userData.canvasTokenType !== 'instructor' && userData.role !== 'instructor') {
+        console.warn('Non-instructor user detected, logging out');
+        localStorage.removeItem('token');
+        setUser(null);
+        return;
+      }
+      
+      setUser(userData);
+      setBackendAvailable(true);
     } catch (error: any) {
       console.error('Auth check failed:', error);
       
-      // Check if it's a network error (backend unavailable)
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-        console.log('Backend appears to be unavailable');
+      // Handle different error types
+      if (error.code === 'NETWORK_ERROR' || error.message?.includes('fetch')) {
         setBackendAvailable(false);
-        
-        // If we have a token but backend is down, keep the user logged in
-        // but show a warning
-        const token = localStorage.getItem('authToken');
-        if (token) {
-          // Create a temporary user object from stored data
-          const storedUser = localStorage.getItem('userData');
-          if (storedUser) {
-            try {
-              setUser(JSON.parse(storedUser));
-              toast.error('Backend is currently unavailable. Some features may not work.');
-            } catch (e) {
-              localStorage.removeItem('authToken');
-              localStorage.removeItem('userData');
-            }
-          }
-        }
       } else {
-        // Other errors (401, etc.) - clear auth data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
         setBackendAvailable(true);
       }
+      
+      // Clear invalid token
+      localStorage.removeItem('token');
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
       const response = await authAPI.login({ email, password });
-      const { token, user } = response.data;
       
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('userData', JSON.stringify(user));
-      setUser(user);
-      setBackendAvailable(true);
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        
+        // Get user data
+        const userResponse = await authAPI.me();
+        const userData = userResponse.data.user || userResponse.data;
+        
+        // Only allow instructors
+        if (userData.canvasTokenType !== 'instructor' && userData.role !== 'instructor') {
+          localStorage.removeItem('token');
+          throw new Error('Only instructors can access this application');
+        }
+        
+        setUser(userData);
+        setBackendAvailable(true);
+        return true;
+      }
       
-      toast.success('Login successful!');
-      return true;
+      return false;
     } catch (error: any) {
       console.error('Login failed:', error);
-      
-      // Check if it's a network error (backend unavailable)
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-        toast.error('Backend is currently unavailable. Please try again later.');
+      if (error.code === 'NETWORK_ERROR') {
         setBackendAvailable(false);
-      } else {
-        toast.error(error.response?.data?.message || 'Login failed');
       }
-      return false;
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -113,57 +118,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signup = async (data: SignupRequest): Promise<boolean> => {
     try {
       setLoading(true);
-      const response = await authAPI.signup(data);
-      const { token, user } = response.data;
       
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('userData', JSON.stringify(user));
-      setUser(user);
-      setBackendAvailable(true);
+      // Ensure only instructor signups are allowed
+      const signupData = {
+        ...data,
+        canvasTokenType: 'instructor' as const,
+        role: 'instructor' as const
+      };
       
-      toast.success('Account created successfully!');
-      return true;
+      const response = await authAPI.signup(signupData);
+      
+              if (response.data.token) {
+          localStorage.setItem('token', response.data.token);
+          const userResponse = await authAPI.me();
+          const userData = userResponse.data.user || userResponse.data;
+          setUser(userData);
+          setBackendAvailable(true);
+          return true;
+        }
+      
+      return false;
     } catch (error: any) {
       console.error('Signup failed:', error);
-      
-      // Check if it's a network error (backend unavailable)
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-        toast.error('Backend is currently unavailable. Please try again later.');
+      if (error.code === 'NETWORK_ERROR') {
         setBackendAvailable(false);
-      } else {
-        toast.error(error.response?.data?.message || 'Signup failed');
       }
-      return false;
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
+    localStorage.removeItem('token');
     setUser(null);
-    toast.success('Logged out successfully');
   };
 
   const refreshUser = async () => {
     try {
       const response = await authAPI.me();
-      const user = response.data.user;
-      setUser(user);
-      localStorage.setItem('userData', JSON.stringify(user));
-      setBackendAvailable(true);
-    } catch (error: any) {
-      console.error('Failed to refresh user:', error);
+      const userData = response.data.user || response.data;
       
-      // Check if it's a network error (backend unavailable)
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-        setBackendAvailable(false);
-        // Don't logout if backend is just unavailable
-        toast.error('Backend is currently unavailable. Some features may not work.');
-      } else {
+      // Only allow instructors
+      if (userData.canvasTokenType !== 'instructor' && userData.role !== 'instructor') {
         logout();
+        return;
       }
+      
+      setUser(userData);
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      logout();
     }
   };
 
