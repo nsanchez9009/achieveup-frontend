@@ -72,6 +72,8 @@ export const skillMatrixAPI = {
     api.get(`/achieveup/matrix/${matrixId}`),
   update: (matrixId: string, data: UpdateSkillMatrixRequest): Promise<AxiosResponse<SkillMatrix>> => 
     api.put(`/achieveup/matrix/${matrixId}`, data),
+  getSkillSuggestions: (data: { courseId: string; courseName: string; courseCode: string; courseDescription?: string }): Promise<AxiosResponse<any[]>> => 
+    api.post('/achieveup/ai/suggest-skills', data),
 };
 
 // Skill Assignment
@@ -80,6 +82,10 @@ export const skillAssignmentAPI = {
     api.post('/achieveup/skills/assign', data),
   suggest: (data: SkillSuggestionRequest): Promise<AxiosResponse<string[]>> => 
     api.post('/achieveup/skills/suggest', data),
+  analyzeQuestions: (data: { courseId: string; quizId: string; questions: any[] }): Promise<AxiosResponse<any[]>> => 
+    api.post('/achieveup/ai/analyze-questions', data),
+  bulkAssignWithAI: (data: { courseId: string; quizId: string }): Promise<AxiosResponse<any>> => 
+    api.post('/achieveup/ai/bulk-assign', data),
 };
 
 // Badge Management

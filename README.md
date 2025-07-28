@@ -1,30 +1,23 @@
-# AchieveUp Frontend
+# AchieveUp Instructor Portal
 
-A modern React/TypeScript frontend for the AchieveUp micro-credentialing system, featuring skill-based learning, badge generation, and comprehensive analytics. This frontend has been enhanced with all functionality from the original AchieveUp AI repository.
+A modern React TypeScript frontend for the AchieveUp skill tracking system, designed specifically for instructors to manage courses, track student progress, and assign skills to assessment questions.
 
-## 🚀 Features
+## 🎯 Features
 
 ### **Core Functionality**
-- **Skill Matrix Management**: Create and manage comprehensive skill matrices with templates
-- **Badge System**: Generate and track skill-based badges with progress indicators
-- **Skill Assignment**: Assign skills to quiz questions with AI-powered suggestions
-- **Progress Tracking**: Monitor student progress across skills and courses
-- **Analytics Dashboard**: Comprehensive analytics and visualization
-- **Canvas Integration**: Seamless integration with Canvas LMS
+- **Course Selection**: Integrated with Canvas LMS for seamless course management
+- **AI-Powered Skill Matrix Creation**: Get intelligent skill suggestions based on course content
+- **Zero-Shot Classification**: Automatically assign skills to quiz questions using AI
+- **Student Progress Tracking**: Monitor individual student skill development
+- **Analytics Dashboard**: Comprehensive instructor analytics and visualizations
 
-### **Enhanced Features (Ported from Original AchieveUp AI)**
-- **Advanced Badge Display**: Earned/unearned status, progress tracking, filtering, export/import
-- **Skill Matrix Templates**: Pre-built templates for Web Development, Data Science, Software Engineering
-- **Question Analysis**: AI-powered complexity assessment and skill suggestions
-- **Bulk Operations**: Mass skill assignment and auto-assignment features
-- **Advanced Filtering**: Search, filter, and organize data efficiently
-- **Import/Export**: Full data portability with JSON export/import
-
-### **Instructor Features**
-- **Instructor Token Support**: Differentiated student vs instructor Canvas tokens
-- **Course Management**: Full course and quiz management capabilities
-- **Advanced Analytics**: Detailed analytics for instructor courses
-- **Bulk Operations**: Efficient management of large datasets
+### **AI-Driven Workflow**
+1. **Select Course** → Choose from Canvas instructor courses
+2. **AI Skill Suggestions** → Get relevant skills suggested by AI based on course content
+3. **Skill Customization** → Edit, add, or remove skills as needed
+4. **Question Analysis** → AI analyzes quiz questions for complexity and skill mapping
+5. **Zero-Shot Classification** → Automatically assign skills to questions
+6. **Progress Tracking** → Track student mastery of assigned skills
 
 ## 🛠️ Technology Stack
 
@@ -35,133 +28,110 @@ A modern React/TypeScript frontend for the AchieveUp micro-credentialing system,
 - **HTTP Client**: Axios
 - **Icons**: Lucide React
 - **Notifications**: React Hot Toast
-- **Build Tool**: Vite
 - **Deployment**: Netlify
-
-
 
 ## 🏗️ Project Structure
 
 ```
 src/
 ├── components/
-│   ├── AnalyticsDashboard/     # Analytics and visualization
-│   ├── BadgeDisplaySystem/     # Badge management and display
-│   ├── common/                 # Reusable UI components
+│   ├── AnalyticsDashboard/     # Instructor analytics
 │   ├── Layout/                 # Navigation and layout
-│   ├── ProgressDashboard/      # Progress tracking
-│   ├── SkillAssignmentInterface/ # Skill assignment to questions
-│   └── SkillMatrixCreator/     # Skill matrix creation
+│   ├── SkillAssignmentInterface/ # AI skill assignment
+│   ├── SkillMatrixCreator/     # AI-powered skill matrix creation
+│   └── common/                 # Reusable UI components
 ├── contexts/
-│   └── AuthContext.tsx         # Authentication state management
+│   └── AuthContext.tsx         # Authentication (instructor-only)
 ├── pages/
-│   ├── Dashboard.tsx           # Main dashboard
-│   ├── Login.tsx               # Login page
-│   ├── Settings.tsx            # User settings and Canvas token
-│   └── Signup.tsx              # Registration page
+│   ├── Dashboard.tsx           # Instructor dashboard
+│   ├── Login.tsx               # Instructor login
+│   ├── Settings.tsx            # Canvas token management
+│   └── Signup.tsx              # Instructor registration
 ├── services/
-│   └── api.ts                  # API service functions
+│   └── api.ts                  # Backend API integration
 └── types/
-    └── index.ts                # TypeScript type definitions
+    └── index.ts                # TypeScript definitions
 ```
 
-## 🎯 Key Components
+## 🚀 Getting Started
 
-### **Badge Display System**
-Enhanced badge management with features from the original `Make_badges.py`:
-- **Badge Generation**: Create badges based on skill levels
-- **Progress Tracking**: Visual progress indicators for unearned badges
-- **Filtering**: Filter by skill, level, and earned status
-- **Export/Import**: JSON export and import functionality
-- **Statistics**: Completion rates and earned badge counts
+### Prerequisites
+- Node.js 16 or higher
+- Canvas LMS instructor account
+- Canvas API token
 
-### **Skill Matrix Creator**
-Advanced matrix creation with features from `MatrixMakerGUI_*.py`:
-- **Templates**: Pre-built templates for common skill sets
-- **Categorization**: Organize skills by category (Frontend, Backend, etc.)
-- **Weighting**: Assign importance levels to skills
-- **Import/Export**: Matrix template management
-- **Advanced Properties**: Skill dependencies and descriptions
+### Installation
 
-### **Skill Assignment Interface**
-Comprehensive skill assignment with features from `SkillAssignerGUI.py`:
-- **Question Analysis**: Automatic complexity assessment
-- **Bulk Operations**: Assign skills to multiple questions
-- **AI Suggestions**: Context-aware skill recommendations
-- **Advanced Filtering**: Search and filter questions
-- **Statistics**: Assignment metrics and progress tracking
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd achieveup-frontend
+   ```
 
-### **Analytics Dashboard**
-Data visualization and analytics from `individual_graphs.py`:
-- **Progress Visualization**: Skill progress over time
-- **Performance Tracking**: Individual vs cohort comparisons
-- **Badge Analytics**: Badge earning patterns
-- **Completion Statistics**: Course and skill completion metrics
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-## 🔐 Authentication & Canvas Integration
+3. **Environment Setup**
+   Create a `.env` file:
+   ```env
+   REACT_APP_API_URL=https://your-backend-url.herokuapp.com
+   REACT_APP_ENVIRONMENT=development
+   ```
 
-### **User Authentication**
-- JWT-based authentication
-- Secure token storage
-- Automatic token refresh
-- Role-based access control
+4. **Start development server**
+   ```bash
+   npm start
+   ```
 
-### **Canvas Integration**
-- **Student Tokens**: Access to enrolled courses
-- **Instructor Tokens**: Full course management capabilities
-- **Token Validation**: Secure token validation with Canvas API
-- **Course Data**: Real-time course and quiz data
+5. **Build for production**
+   ```bash
+   npm run build
+   ```
 
-### **Token Management**
-- **Token Type Selection**: Choose between student and instructor tokens
-- **Secure Storage**: Encrypted token storage
-- **Token Validation**: Real-time validation with Canvas
-- **Token Status**: Visual indicators for token status
+## 🔐 Authentication
+
+This application is **instructor-only**. Users must:
+- Have a Canvas LMS instructor account
+- Provide a valid Canvas instructor API token
+- Be authenticated as an instructor role
 
 ## 🎨 UI/UX Features
 
-### **Design System**
-- **UCF Branding**: Black, bright gold, grey, and white color scheme
+- **UCF Branding**: Black, gold, grey, and white color scheme
 - **Responsive Design**: Works on all screen sizes
+- **Modern Interface**: Clean, professional instructor-focused design
+- **Real-time Feedback**: Loading states and toast notifications
 - **Accessibility**: WCAG compliant design
-- **Modern UI**: Clean, professional interface
 
-### **User Experience**
-- **Loading States**: Professional loading indicators
-- **Error Handling**: Graceful error handling with user feedback
-- **Real-time Updates**: Live progress and status updates
-- **Keyboard Navigation**: Full keyboard accessibility
+## 📊 AI Integration
 
-## 📊 Data Management
+All AI functionality is handled by the backend:
 
-### **Import/Export Features**
-- **JSON Export**: Export all data types (badges, matrices, assignments)
-- **JSON Import**: Import data from external sources
-- **Data Validation**: Automatic data validation on import
-- **Backup/Restore**: Complete data backup and restore functionality
+- **Skill Suggestions**: `/achieveup/ai/suggest-skills`
+- **Question Analysis**: `/achieveup/ai/analyze-questions`
+- **Bulk Assignment**: `/achieveup/ai/bulk-assign`
 
-### **Bulk Operations**
-- **Mass Assignment**: Assign skills to multiple questions
-- **Template Loading**: Load pre-built skill matrices
-- **Auto-Assignment**: Automatically assign suggested skills
-- **Batch Processing**: Efficient handling of large datasets
-
-
+The frontend provides the interface while the backend handles:
+- NLP/ML processing
+- Zero-shot classification
+- Question complexity analysis
+- Skill mapping algorithms
 
 ## 🚀 Deployment
 
-### **Netlify Deployment**
-The project is configured for automatic deployment on Netlify:
-- **Build Command**: `npm run build`
-- **Publish Directory**: `build`
-- **Environment Variables**: Configured in Netlify dashboard
+### Netlify Configuration
+The project includes automatic Netlify deployment:
 
-### **Environment Configuration**
 ```toml
-# netlify.toml
 [build]
   command = "npm run build"
   publish = "build"
+
+[build.environment]
+  REACT_APP_API_URL = "https://your-backend-url.herokuapp.com"
+  REACT_APP_ENVIRONMENT = "production"
 
 [[redirects]]
   from = "/*"
@@ -169,56 +139,62 @@ The project is configured for automatic deployment on Netlify:
   status = 200
 ```
 
+### Environment Variables
+- `REACT_APP_API_URL`: Backend API URL
+- `REACT_APP_ENVIRONMENT`: Environment (development/production)
+
 ## 🔗 Backend Integration
 
-### **API Endpoints**
-The frontend integrates with the AchieveUp backend API:
-- **Authentication**: JWT-based auth with Canvas integration
-- **Canvas API**: Course and quiz data retrieval
-- **AchieveUp API**: Skill matrices, badges, and progress tracking
-- **Analytics API**: Data visualization and reporting
+This frontend requires a compatible backend that provides:
 
-### **Backend Requirements**
-See `backend_compatibility_instructions.txt` for detailed backend requirements and implementation guide.
+1. **Authentication Endpoints**
+   - JWT-based instructor authentication
+   - Canvas token validation
+
+2. **Canvas Integration**
+   - Course data retrieval
+   - Quiz and question management
+
+3. **AI Services**
+   - Skill suggestion algorithms
+   - Question analysis and classification
+   - Bulk assignment operations
+
+4. **Data Management**
+   - Skill matrix storage
+   - Progress tracking
+   - Analytics data
+
+See `backend-requirements.txt` for detailed implementation requirements.
 
 ## 📈 Performance
 
-### **Optimizations**
-- **Code Splitting**: Lazy loading of components
-- **Bundle Optimization**: Optimized build output
-- **Caching**: Efficient data caching strategies
-- **Image Optimization**: Optimized image loading
+- **Optimized Build**: Code splitting and bundle optimization
+- **Efficient Rendering**: React optimization patterns
+- **Caching**: Strategic API response caching
+- **Loading States**: Professional loading indicators
 
-### **Monitoring**
-- **Error Tracking**: Comprehensive error monitoring
-- **Performance Metrics**: Real-time performance tracking
-- **User Analytics**: Usage analytics and insights
+## 🧪 Development
 
+### Code Quality
+- TypeScript for type safety
+- ESLint for code quality
+- Prettier for formatting
+- Consistent component patterns
 
-
-
-
-
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- **Original AchieveUp AI**: Features ported from the [original AchieveUp AI repository](https://github.com/AwesomePaul100/AchieveUp/tree/AchieveUp-AI)
-- **KnowGap Backend**: Integration with [KnowGap backend](https://github.com/AndresQ9/knowgap-backend) for Canvas data
-- **UCF Branding**: University of Central Florida color scheme and branding
-- **React Community**: Open source React ecosystem and tools
+### Architecture
+- Component-based architecture
+- Context for state management
+- Custom hooks for logic reuse
+- Service layer for API calls
 
 ## 📞 Support
 
-For support and questions:
-- **Issues**: Create an issue on GitHub
-- **Documentation**: Check the backend compatibility instructions
-- **Backend Integration**: See `backend_compatibility_instructions.txt`
+For questions about:
+- **Frontend Issues**: Check component documentation
+- **Backend Integration**: See backend requirements
+- **Canvas Setup**: Refer to Canvas API documentation
 
 ---
 
-**Status**: ✅ Production Ready - All original AchieveUp AI features implemented and enhanced
-**Last Updated**: December 2024 
+**AchieveUp Instructor Portal** - AI-Powered Skill Tracking for Educators 

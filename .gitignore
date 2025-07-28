@@ -29,12 +29,4 @@ yarn-error.log*
 *.swo
 
 # OS
-Thumbs.db
-
-# Documentation and instruction files
-achieveup_frontend_instructions.md
-backend_compatibility_instructions.txt
-frontend_changes_summary.txt
-
-# Backend communication files
-backend-communication/ 
+Thumbs.db 

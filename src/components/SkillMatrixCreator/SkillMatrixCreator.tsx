@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { BookOpen, Brain, Save, Edit2, Trash2, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { skillMatrixAPI, canvasInstructorAPI } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
 import { SkillMatrix } from '../../types';
 import Button from '../common/Button';
 import Card from '../common/Card';
@@ -20,7 +19,7 @@ interface CanvasCourse {
   description?: string;
 }
 
-interface AISkillSuggestion {
+interface SkillSuggestion {
   skill: string;
   relevance: number;
   description: string;
@@ -33,11 +32,11 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>(courseId || '');
   const [selectedCourseData, setSelectedCourseData] = useState<CanvasCourse | null>(null);
-  const [aiSuggestions, setAiSuggestions] = useState<AISkillSuggestion[]>([]);
+  const [skillSuggestions, setSkillSuggestions] = useState<SkillSuggestion[]>([]);
   const [finalSkills, setFinalSkills] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [step, setStep] = useState<'select-course' | 'ai-suggestions' | 'review-skills'>('select-course');
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [step, setStep] = useState<'select-course' | 'get-suggestions' | 'review-skills'>('select-course');
   const [editingSkill, setEditingSkill] = useState<number | null>(null);
   const [newSkill, setNewSkill] = useState('');
 
@@ -68,90 +67,46 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
     setSelectedCourseData(course || null);
     
     if (course) {
-      // Auto-populate matrix name with course name
       setValue('matrixName', `${course.name} - Skills Matrix`);
-      setStep('ai-suggestions');
+      setStep('get-suggestions');
     }
   };
 
-  const getAISkillSuggestions = async () => {
+  const getSkillSuggestions = async () => {
     if (!selectedCourseData) {
       toast.error('Please select a course first');
       return;
     }
 
-    setAiLoading(true);
+    setSuggestionsLoading(true);
     try {
-      // For now, use fallback since AI endpoint doesn't exist yet
-      const fallbackSkills = generateFallbackSkills(selectedCourseData);
-      setAiSuggestions(fallbackSkills);
+      // Call backend for AI skill suggestions
+      const response = await skillMatrixAPI.getSkillSuggestions({
+        courseId: selectedCourse,
+        courseName: selectedCourseData.name,
+        courseCode: selectedCourseData.code,
+        courseDescription: selectedCourseData.description
+      });
       
-      // Auto-select all AI suggestions as starting point
-      const suggestedSkills = fallbackSkills.map((s: AISkillSuggestion) => s.skill);
+      setSkillSuggestions(response.data);
+      
+      // Auto-select all suggestions as starting point
+      const suggestedSkills = response.data.map((s: SkillSuggestion) => s.skill);
       setFinalSkills(suggestedSkills);
       
       setStep('review-skills');
-      toast.success(`AI suggested ${fallbackSkills.length} skills for ${selectedCourseData.name}`);
+      toast.success(`Got ${response.data.length} skill suggestions for ${selectedCourseData.name}`);
     } catch (error) {
-      console.error('Error getting AI suggestions:', error);
+      console.error('Error getting skill suggestions:', error);
+      toast.error('Failed to get skill suggestions. You can add skills manually.');
       
-      // Fallback to manual skills based on course name/code
-      const fallbackSkills = generateFallbackSkills(selectedCourseData);
-      setAiSuggestions(fallbackSkills);
-      setFinalSkills(fallbackSkills.map((s: AISkillSuggestion) => s.skill));
+      // If backend fails, allow manual skill entry
+      setSkillSuggestions([]);
+      setFinalSkills([]);
       setStep('review-skills');
-      
-      toast.error('AI suggestions failed. Using fallback skills. Please review and edit as needed.');
     } finally {
-      setAiLoading(false);
+      setSuggestionsLoading(false);
     }
-  };
-
-  const generateFallbackSkills = (course: CanvasCourse): AISkillSuggestion[] => {
-    const courseName = course.name.toLowerCase();
-    const courseCode = course.code.toLowerCase();
-    
-    // Basic skill mapping based on common course types
-    let skills: string[] = [];
-    
-    if (courseName.includes('programming') || courseName.includes('coding') || courseCode.includes('cop')) {
-      skills = [
-        'Problem Solving', 'Algorithm Design', 'Code Implementation', 'Debugging',
-        'Data Structures', 'Programming Logic', 'Code Documentation', 'Testing',
-        'Version Control', 'Code Review', 'Software Design', 'Error Handling'
-      ];
-    } else if (courseName.includes('data') || courseName.includes('analytics') || courseCode.includes('sta')) {
-      skills = [
-        'Data Analysis', 'Statistical Reasoning', 'Data Visualization', 'Data Cleaning',
-        'Statistical Methods', 'Data Interpretation', 'Research Methods', 'Hypothesis Testing',
-        'Data Collection', 'Report Writing', 'Critical Thinking', 'Quantitative Analysis'
-      ];
-    } else if (courseName.includes('web') || courseName.includes('internet')) {
-      skills = [
-        'HTML/CSS', 'JavaScript', 'Web Design', 'User Experience',
-        'Responsive Design', 'Front-end Development', 'Back-end Development', 'Database Integration',
-        'Web Security', 'Performance Optimization', 'API Integration', 'Testing'
-      ];
-    } else if (courseName.includes('database') || courseCode.includes('cda')) {
-      skills = [
-        'Database Design', 'SQL Queries', 'Data Modeling', 'Normalization',
-        'Query Optimization', 'Database Administration', 'Data Integrity', 'Backup/Recovery',
-        'Index Management', 'Stored Procedures', 'Data Security', 'Performance Tuning'
-      ];
-    } else {
-      // Generic academic skills
-      skills = [
-        'Critical Thinking', 'Problem Solving', 'Communication', 'Research',
-        'Analysis', 'Synthesis', 'Evaluation', 'Application',
-        'Collaboration', 'Time Management', 'Project Management', 'Presentation'
-      ];
-    }
-
-    return skills.slice(0, 12).map((skill, index) => ({
-      skill,
-      relevance: 0.9 - (index * 0.05),
-      description: `${skill} relevant to ${course.name}`
-    }));
   };
 
   const toggleSkill = (skill: string) => {
@@ -199,7 +154,6 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
         course_id: selectedCourse,
         matrix_name: data.matrixName,
         skills: finalSkills,
-        ai_suggested_skills: aiSuggestions.map(s => s.skill),
         description: data.description
       };
 
@@ -212,7 +166,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       setStep('select-course');
       setSelectedCourse('');
       setSelectedCourseData(null);
-      setAiSuggestions([]);
+      setSkillSuggestions([]);
       setFinalSkills([]);
       setValue('matrixName', '');
       setValue('description', '');
@@ -227,8 +181,8 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   return (
     <div className="max-w-4xl mx-auto p-6">
       <Card
-        title="AI-Powered Skill Matrix Creator"
-        subtitle="Select a course and let AI suggest relevant skills, then customize as needed"
+        title="Skill Matrix Creator"
+        subtitle="Select a course and get AI-powered skill suggestions, then customize as needed"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Step 1: Course Selection */}
@@ -269,12 +223,12 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
             </div>
           )}
 
-          {/* Step 2: AI Suggestions */}
-          {step === 'ai-suggestions' && selectedCourseData && (
+          {/* Step 2: Get Skill Suggestions */}
+          {step === 'get-suggestions' && selectedCourseData && (
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                 <Brain className="w-5 h-5 mr-2 text-purple-600" />
-                Step 2: Get AI Skill Suggestions
+                Step 2: Get Skill Suggestions
               </h3>
               
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -285,20 +239,34 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
 
               <div className="text-center">
                 <p className="text-gray-600 mb-4">
-                  Our AI will analyze "{selectedCourseData.name}" and suggest 10-12 relevant skills 
+                  Our AI will analyze "{selectedCourseData.name}" and suggest relevant skills 
                   that students should develop in this course.
                 </p>
                 
                 <Button
                   type="button"
-                  onClick={getAISkillSuggestions}
-                  loading={aiLoading}
-                  disabled={aiLoading}
+                  onClick={getSkillSuggestions}
+                  loading={suggestionsLoading}
+                  disabled={suggestionsLoading}
                   className="flex items-center"
                 >
                   <Brain className="w-4 h-4 mr-2" />
-                  {aiLoading ? 'Getting AI Suggestions...' : 'Get AI Skill Suggestions'}
+                  {suggestionsLoading ? 'Getting Skill Suggestions...' : 'Get Skill Suggestions'}
                 </Button>
+                
+                <div className="mt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setSkillSuggestions([]);
+                      setFinalSkills([]);
+                      setStep('review-skills');
+                    }}
+                  >
+                    Skip and Add Skills Manually
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -328,92 +296,101 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
               </div>
 
               {/* AI Suggested Skills */}
-              <div className="mb-6">
-                <h4 className="font-medium text-gray-900 mb-3">
-                  AI Suggested Skills ({aiSuggestions.length} skills)
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {aiSuggestions.map((suggestion, index) => (
-                    <div
-                      key={index}
-                      onClick={() => toggleSkill(suggestion.skill)}
-                      className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
-                        finalSkills.includes(suggestion.skill)
-                          ? 'border-green-300 bg-green-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-900">{suggestion.skill}</span>
-                        <CheckCircle className={`w-4 h-4 ${
+              {skillSuggestions.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    AI Suggested Skills ({skillSuggestions.length} skills)
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {skillSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        onClick={() => toggleSkill(suggestion.skill)}
+                        className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
                           finalSkills.includes(suggestion.skill)
-                            ? 'text-green-600'
-                            : 'text-gray-300'
-                        }`} />
-                      </div>
-                      <p className="text-xs text-gray-600 mt-1">{suggestion.description}</p>
-                      <div className="mt-2">
-                        <div className="w-full bg-gray-200 rounded-full h-1">
-                          <div 
-                            className="bg-blue-500 h-1 rounded-full"
-                            style={{ width: `${suggestion.relevance * 100}%` }}
-                          ></div>
+                            ? 'border-green-300 bg-green-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-900">{suggestion.skill}</span>
+                          <CheckCircle className={`w-4 h-4 ${
+                            finalSkills.includes(suggestion.skill)
+                              ? 'text-green-600'
+                              : 'text-gray-300'
+                          }`} />
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Relevance: {Math.round(suggestion.relevance * 100)}%
-                        </p>
+                        <p className="text-xs text-gray-600 mt-1">{suggestion.description}</p>
+                        <div className="mt-2">
+                          <div className="w-full bg-gray-200 rounded-full h-1">
+                            <div 
+                              className="bg-blue-500 h-1 rounded-full"
+                              style={{ width: `${suggestion.relevance * 100}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Relevance: {Math.round(suggestion.relevance * 100)}%
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Final Skills List */}
               <div className="mb-6">
                 <h4 className="font-medium text-gray-900 mb-3">
-                  Final Skills List ({finalSkills.length} skills)
+                  Skills List ({finalSkills.length} skills)
                 </h4>
-                <div className="space-y-2">
-                  {finalSkills.map((skill, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                      {editingSkill === index ? (
-                        <input
-                          type="text"
-                          defaultValue={skill}
-                          autoFocus
-                          onBlur={(e) => editSkill(index, e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              editSkill(index, (e.target as HTMLInputElement).value);
-                            }
-                          }}
-                          className="flex-1 px-2 py-1 border border-gray-300 rounded"
-                        />
-                      ) : (
-                        <span 
-                          className="flex-1 cursor-pointer hover:text-blue-600"
+                
+                {finalSkills.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <p className="text-gray-600">No skills added yet. Add skills below.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {finalSkills.map((skill, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                        {editingSkill === index ? (
+                          <input
+                            type="text"
+                            defaultValue={skill}
+                            autoFocus
+                            onBlur={(e) => editSkill(index, e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                editSkill(index, (e.target as HTMLInputElement).value);
+                              }
+                            }}
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded"
+                          />
+                        ) : (
+                          <span 
+                            className="flex-1 cursor-pointer hover:text-blue-600"
+                            onClick={() => setEditingSkill(index)}
+                          >
+                            {skill}
+                          </span>
+                        )}
+                        <button
+                          type="button"
                           onClick={() => setEditingSkill(index)}
+                          className="text-blue-600 hover:text-blue-800"
                         >
-                          {skill}
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setEditingSkill(index)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeSkill(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeSkill(index)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Add Custom Skill */}
                 <div className="flex gap-2 mt-4">
@@ -446,9 +423,9 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setStep('ai-suggestions')}
+                  onClick={() => setStep('get-suggestions')}
                 >
-                  Back to Course Selection
+                  Back
                 </Button>
                 
                 <Button
