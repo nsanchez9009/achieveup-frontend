@@ -417,14 +417,15 @@ describe('SkillMatrixCreator Component', () => {
       fireEvent.click(courseCard!);
     });
 
+    let suggestionsButton: HTMLElement | null = null;
     await waitFor(() => {
-      const suggestionsButton = screen.getByText('Get Skill Suggestions');
+      suggestionsButton = screen.getByText('Get Skill Suggestions');
       fireEvent.click(suggestionsButton);
     });
 
     // Should show loading state
     expect(screen.getByText('Getting Skill Suggestions...')).toBeInTheDocument();
-    expect(suggestionsButton).toBeDisabled();
+    expect(suggestionsButton!).toBeDisabled();
 
     // Resolve the promise
     resolvePromise!({ data: mockSkillSuggestions });
@@ -454,13 +455,14 @@ describe('SkillMatrixCreator Component', () => {
       fireEvent.click(suggestionsButton);
     });
 
+    let createButton: HTMLElement | null = null;
     await waitFor(() => {
-      const createButton = screen.getByText('Create Skill Matrix');
+      createButton = screen.getByText('Create Skill Matrix');
       fireEvent.click(createButton);
     });
 
     // Should show loading state
-    expect(createButton).toBeDisabled();
+    expect(createButton!).toBeDisabled();
 
     // Resolve the promise
     resolvePromise!({ data: { id: 'matrix1' } });
