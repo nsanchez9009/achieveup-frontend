@@ -1,388 +1,586 @@
-ACHIEVEUP FRONTEND BACKEND REQUIREMENTS
-=========================================
+ACHIEVEUP INSTRUCTOR PORTAL - BACKEND IMPLEMENTATION GUIDE
+==========================================================
 
-FRONTEND STATUS: COMPLETE AND READY FOR PRODUCTION
+FRONTEND STATUS: ✅ PRODUCTION READY AND DEPLOYED
 BACKEND STATUS: NEEDS IMPLEMENTATION
 
-This document outlines the exact backend requirements needed to support the AchieveUp Instructor Portal frontend.
+VISION & CONTEXT
+================
 
-CRITICAL IMPLEMENTATION PRIORITIES:
-===================================
+ACHIEVEUP VISION:
+-----------------
+AchieveUp is an AI-powered skill tracking system designed to revolutionize how instructors assess and track student learning outcomes. The system transforms traditional assessment into a dynamic, skill-based learning experience that provides real-time insights into student mastery.
 
-HIGHEST PRIORITY (implement immediately):
-1. Authentication system with instructor-only access
-2. Canvas API integration for course/quiz data
-3. AI skill suggestion endpoints
-4. Basic skill matrix and assignment storage
+CORE PHILOSOPHY:
+- **Skills Over Scores**: Move beyond simple grades to track specific skill development
+- **AI-Enhanced Teaching**: Use artificial intelligence to identify and map skills to assessments
+- **Real-Time Insights**: Provide instructors with immediate feedback on student progress
+- **Personalized Learning**: Enable targeted interventions based on skill gaps
+- **Evidence-Based Education**: Create verifiable skill credentials for students
 
-MEDIUM PRIORITY:
-1. AI question analysis and zero-shot classification
-2. Student progress tracking
-3. Advanced analytics endpoints
+THE BIG PICTURE:
+---------------
+Traditional education systems focus on grades and test scores, but they often fail to answer the fundamental question: "What specific skills has this student actually mastered?" AchieveUp solves this by:
 
-LOW PRIORITY:
-1. Advanced analytics features
-2. Data export/import functionality
-3. Performance optimizations
+1. **AI-Powered Skill Discovery**: Automatically identify relevant skills for any course
+2. **Zero-Shot Classification**: Map quiz questions to specific skills using AI
+3. **Progress Tracking**: Monitor individual student skill development over time
+4. **Analytics & Insights**: Provide instructors with actionable data about student performance
+5. **Skill Credentials**: Generate verifiable skill badges for student portfolios
 
-REQUIRED API ENDPOINTS:
+WHY THIS MATTERS:
+-----------------
+- **For Instructors**: Get detailed insights into what students actually know and can do
+- **For Students**: Receive clear feedback on specific skills they've mastered
+- **For Employers**: See verifiable skill credentials instead of just grades
+- **For Institutions**: Demonstrate learning outcomes with concrete evidence
+
+TECHNICAL VISION:
+-----------------
+The backend serves as the AI-powered brain of the system, providing:
+
+1. **Intelligent Skill Mapping**: Use NLP/ML to analyze course content and suggest relevant skills
+2. **Question Analysis**: Automatically classify quiz questions by complexity and skill relevance
+3. **Progress Analytics**: Track student skill development with sophisticated algorithms
+4. **Canvas Integration**: Seamlessly connect with existing LMS infrastructure
+5. **Scalable Architecture**: Support multiple institutions and thousands of students
+
+IMPLEMENTATION CONTEXT:
 ======================
+
+CURRENT STATE:
+-------------
+- ✅ Frontend is complete and production-ready
+- ✅ All UI components are implemented and tested
+- ✅ Canvas integration is designed and ready
+- ✅ AI workflow is defined and documented
+- ❌ Backend needs implementation to enable AI features
+
+CRITICAL ENDPOINTS TO IMPLEMENT:
+===============================
 
 1. AUTHENTICATION ENDPOINTS:
 ---------------------------
 POST /api/auth/login
-- Body: { email, password }
-- Response: { token, user: { id, name, email, role: "instructor", canvasTokenType: "instructor" } }
+- Body: { email: string, password: string }
+- Response: { token: string, user: User }
+- Validation: Ensure user has role 'instructor' and canvasTokenType 'instructor'
 
-POST /api/auth/signup
-- Body: { name, email, password, canvasApiToken, canvasTokenType: "instructor" }
-- Response: { token, user }
+POST /api/auth/signup  
+- Body: { name: string, email: string, password: string, canvasApiToken: string, canvasTokenType: "instructor" }
+- Response: { token: string, user: User }
+- Validation: Verify Canvas token is valid instructor token before creating user
 
 GET /api/auth/me
 - Headers: Authorization: Bearer <token>
-- Response: { user }
+- Response: { user: User }
+- Must return user with all required fields including canvasTokenType
 
 POST /api/auth/validate-canvas-token
-- Body: { canvasApiToken, canvasTokenType: "instructor" }
-- Response: { valid: boolean, message? }
+- Body: { canvasApiToken: string, canvasTokenType: "instructor" }
+- Response: { valid: boolean, message?: string }
+- Implementation: Make actual Canvas API call to validate token
 
 2. CANVAS INTEGRATION ENDPOINTS:
 -------------------------------
 GET /api/canvas/instructor/courses
 - Headers: Authorization: Bearer <token>
-- Response: [{ id, name, code, description? }]
+- Response: CanvasCourse[]
+- Canvas API Call: GET /api/v1/courses (using user's Canvas token)
+- Filter: Only return courses where user is instructor
 
 GET /api/canvas/instructor/quizzes/:courseId
-- Response: [{ id, title, course_id }]
+- Response: CanvasQuiz[]
+- Canvas API Call: GET /api/v1/courses/:courseId/quizzes
+- Validation: Ensure user has instructor access to course
 
 GET /api/canvas/instructor/questions/:quizId
-- Response: [{ id, question_text, quiz_id, question_type?, points? }]
+- Response: CanvasQuestion[]
+- Canvas API Call: GET /api/v1/quizzes/:quizId/questions
+- Validation: Ensure user has instructor access to quiz
 
 3. AI SKILL SUGGESTION ENDPOINTS:
 ---------------------------------
 POST /achieveup/ai/suggest-skills
-- Body: { courseId, courseName, courseCode, courseDescription? }
-- Response: [{ skill, relevance, description }]
-- AI Processing: Analyze course content and suggest 10-12 relevant skills
+- Body: { courseId: string, courseName: string, courseCode: string, courseDescription?: string }
+- Response: SkillSuggestion[]
+- AI Implementation: See detailed instructions below
 
 4. SKILL MATRIX ENDPOINTS:
 -------------------------
 POST /achieveup/matrix/create
-- Body: { course_id, matrix_name, skills, description? }
-- Response: { _id, course_id, matrix_name, skills, created_at, updated_at }
+- Body: { course_id: string, matrix_name: string, skills: string[], description?: string }
+- Response: SkillMatrix
+- Database: Store in skill_matrices table
 
 GET /achieveup/matrix/:matrixId
-- Response: skill matrix object
+- Response: SkillMatrix
+- Database: Retrieve from skill_matrices table
 
 PUT /achieveup/matrix/:matrixId
-- Body: { skills }
-- Response: updated skill matrix
+- Body: { skills: string[] }
+- Response: SkillMatrix
+- Database: Update skills array in skill_matrices table
 
 5. SKILL ASSIGNMENT ENDPOINTS:
 ------------------------------
 POST /achieveup/skills/assign
-- Body: { course_id, question_skills: { [questionId]: [skills] } }
-- Response: success confirmation
-
-POST /achieveup/skills/suggest
-- Body: { question_text, course_context? }
-- Response: [skill suggestions]
+- Body: { course_id: string, question_skills: { [questionId]: string[] } }
+- Response: { success: boolean }
+- Database: Store/update in skill_assignments table
 
 POST /achieveup/ai/analyze-questions
-- Body: { courseId, quizId, questions: [{ id, text, type?, points? }] }
-- Response: [{ questionId, complexity: "low"|"medium"|"high", suggestedSkills, confidence }]
-- AI Processing: Use zero-shot classification to analyze questions and suggest skills
+- Body: { courseId: string, quizId: string, questions: QuestionData[] }
+- Response: QuestionAnalysis[]
+- AI Implementation: See detailed instructions below
 
 POST /achieveup/ai/bulk-assign
-- Body: { courseId, quizId }
-- Response: { [questionId]: [skills] }
-- AI Processing: Analyze all questions in quiz and assign appropriate skills
+- Body: { courseId: string, quizId: string }
+- Response: { [questionId]: string[] }
+- AI Implementation: See detailed instructions below
 
 6. ANALYTICS ENDPOINTS:
 ----------------------
 GET /api/analytics/course/:courseId/students
-- Response: [{ id, name, progress, skillsMastered, badgesEarned, riskLevel }]
+- Response: StudentAnalytics[]
+- Implementation: Aggregate student progress data
 
 GET /api/analytics/individual-graphs/:studentId
-- Response: { performance, distribution, trends, radar, summary }
+- Response: GraphData
+- Implementation: Generate charts data for student
 
-GET /api/analytics/export/:courseId
-- Response: CSV/JSON export data
+AI IMPLEMENTATION INSTRUCTIONS:
+===============================
+
+1. SKILL SUGGESTION AI (POST /achieveup/ai/suggest-skills):
+---------------------------------------------------------
+INPUT:
+{
+  "courseId": "string",
+  "courseName": "Web Development Fundamentals", 
+  "courseCode": "COP3530",
+  "courseDescription": "Introduction to web technologies..."
+}
+
+AI PROCESSING:
+1. Analyze course metadata using NLP
+2. Use course code patterns (COP = Computer Programming, etc.)
+3. Extract key technologies/concepts from course name and description
+4. Map to relevant skill categories
+
+EXPECTED OUTPUT:
+[
+  {
+    "skill": "HTML/CSS Fundamentals",
+    "relevance": 0.95,
+    "description": "Core web markup and styling skills"
+  },
+  {
+    "skill": "JavaScript Programming", 
+    "relevance": 0.90,
+    "description": "Client-side scripting and DOM manipulation"
+  },
+  {
+    "skill": "Responsive Design",
+    "relevance": 0.85,
+    "description": "Mobile-first design principles"
+  }
+  // ... 8-12 total skills
+]
+
+FALLBACK IMPLEMENTATION:
+If AI service fails, use rule-based mapping:
+- COP courses → Programming skills
+- CDA courses → Database skills  
+- CGS courses → General computer skills
+- Default → Generic academic skills
+
+CODE EXAMPLE:
+```python
+def generate_skill_suggestions(course_data):
+    try:
+        # Primary: AI-based analysis
+        prompt = f"Suggest 10-12 specific skills for {course_data['courseName']}"
+        ai_response = openai_client.complete(prompt)
+        return parse_ai_skills(ai_response)
+    except:
+        # Fallback: Rule-based
+        return get_fallback_skills(course_data['courseCode'])
+```
+
+2. QUESTION ANALYSIS AI (POST /achieveup/ai/analyze-questions):
+-------------------------------------------------------------
+INPUT:
+{
+  "courseId": "12345",
+  "quizId": "67890", 
+  "questions": [
+    {
+      "id": "q1",
+      "text": "What is the difference between let and var in JavaScript?",
+      "type": "multiple_choice",
+      "points": 5
+    }
+  ]
+}
+
+AI PROCESSING:
+1. Zero-shot classification on question text
+2. Analyze complexity based on:
+   - Question length and structure
+   - Technical terminology density
+   - Cognitive load (recall vs analysis vs synthesis)
+3. Map to course skills using semantic similarity
+
+EXPECTED OUTPUT:
+[
+  {
+    "questionId": "q1",
+    "complexity": "medium", 
+    "suggestedSkills": ["JavaScript Programming", "Variable Scoping"],
+    "confidence": 0.87
+  }
+]
+
+CODE EXAMPLE:
+```python
+def analyze_questions(questions_data):
+    results = []
+    for question in questions_data['questions']:
+        # Complexity analysis
+        complexity = classify_complexity(question['text'])
+        
+        # Skill mapping using zero-shot classification
+        skills = classify_skills(question['text'], course_context)
+        
+        # Confidence scoring
+        confidence = calculate_confidence(question, skills)
+        
+        results.append({
+            "questionId": question['id'],
+            "complexity": complexity,
+            "suggestedSkills": skills,
+            "confidence": confidence
+        })
+    return results
+```
+
+3. BULK ASSIGNMENT AI (POST /achieveup/ai/bulk-assign):
+-----------------------------------------------------
+INPUT:
+{
+  "courseId": "12345",
+  "quizId": "67890"
+}
+
+PROCESSING:
+1. Fetch all questions for the quiz
+2. Get existing skill matrix for the course
+3. Run batch zero-shot classification
+4. Assign 1-3 most relevant skills per question
+
+EXPECTED OUTPUT:
+{
+  "q1": ["JavaScript Programming", "Variable Scoping"],
+  "q2": ["HTML Fundamentals", "DOM Manipulation"], 
+  "q3": ["CSS Styling", "Responsive Design"]
+}
 
 DATABASE SCHEMA REQUIREMENTS:
-=============================
+============================
 
 1. USERS TABLE:
 --------------
-- id: string (primary key)
-- name: string
-- email: string (unique)
-- password: string (hashed)
-- role: "instructor" | "admin"
-- canvasTokenType: "instructor"
-- canvasApiToken: string (encrypted)
-- canvas_token_created_at: timestamp
-- canvas_token_last_validated: timestamp
-- created_at: timestamp
-- updated_at: timestamp
+users {
+  id: UUID PRIMARY KEY,
+  name: VARCHAR NOT NULL,
+  email: VARCHAR UNIQUE NOT NULL,
+  password_hash: VARCHAR NOT NULL,
+  role: ENUM('instructor', 'admin') NOT NULL,
+  canvas_token_type: ENUM('instructor') NOT NULL,
+  canvas_api_token: VARCHAR ENCRYPTED NOT NULL,
+  canvas_token_created_at: TIMESTAMP,
+  canvas_token_last_validated: TIMESTAMP,
+  created_at: TIMESTAMP DEFAULT NOW(),
+  updated_at: TIMESTAMP DEFAULT NOW()
+}
 
 2. SKILL_MATRICES TABLE:
 -----------------------
-- _id: string (primary key)
-- course_id: string
-- matrix_name: string
-- skills: array of strings
-- description: string (optional)
-- created_at: timestamp
-- updated_at: timestamp
+skill_matrices {
+  id: UUID PRIMARY KEY,
+  course_id: VARCHAR NOT NULL,
+  matrix_name: VARCHAR NOT NULL,
+  skills: JSON NOT NULL, -- Array of skill names
+  description: TEXT,
+  created_at: TIMESTAMP DEFAULT NOW(),
+  updated_at: TIMESTAMP DEFAULT NOW(),
+  INDEX(course_id)
+}
 
 3. SKILL_ASSIGNMENTS TABLE:
 --------------------------
-- id: string (primary key)
-- course_id: string
-- quiz_id: string
-- question_id: string
-- skills: array of strings
-- ai_generated: boolean
-- human_reviewed: boolean
-- created_at: timestamp
-- updated_at: timestamp
+skill_assignments {
+  id: UUID PRIMARY KEY,
+  course_id: VARCHAR NOT NULL,
+  quiz_id: VARCHAR NOT NULL,
+  question_id: VARCHAR NOT NULL,
+  skills: JSON NOT NULL, -- Array of assigned skills
+  ai_generated: BOOLEAN DEFAULT FALSE,
+  human_reviewed: BOOLEAN DEFAULT FALSE,
+  created_at: TIMESTAMP DEFAULT NOW(),
+  updated_at: TIMESTAMP DEFAULT NOW(),
+  UNIQUE(question_id),
+  INDEX(course_id, quiz_id)
+}
 
 4. QUESTION_ANALYSIS TABLE:
 --------------------------
-- id: string (primary key)
-- question_id: string
-- quiz_id: string
-- course_id: string
-- complexity: "low" | "medium" | "high"
-- ai_confidence: number (0-1)
-- suggested_skills: array of strings
-- analysis_status: "pending" | "analyzing" | "completed" | "error"
-- created_at: timestamp
-- updated_at: timestamp
-
-5. STUDENT_PROGRESS TABLE:
--------------------------
-- id: string (primary key)
-- student_id: string
-- course_id: string
-- skill_name: string
-- score: number
-- level: "beginner" | "intermediate" | "advanced"
-- total_questions: number
-- correct_answers: number
-- last_updated: timestamp
-
-AI SERVICE INTEGRATION REQUIREMENTS:
-===================================
-
-1. SKILL SUGGESTION AI:
------------------------
-- Input: Course metadata (name, code, description)
-- Output: Relevant skills with relevance scores
-- Method: NLP analysis of course content
-- Fallback: Rule-based skill mapping for common course types
-
-2. QUESTION ANALYSIS AI:
------------------------
-- Input: Question text, course context
-- Output: Complexity level, suggested skills, confidence score
-- Method: Zero-shot classification using pre-trained models
-- Features: Question type detection, complexity analysis
-
-3. BULK ASSIGNMENT AI:
----------------------
-- Input: Quiz questions, course context, existing skill matrix
-- Output: Skill assignments for all questions
-- Method: Batch zero-shot classification
-- Performance: Handle 50+ questions efficiently
+question_analysis {
+  id: UUID PRIMARY KEY,
+  question_id: VARCHAR UNIQUE NOT NULL,
+  quiz_id: VARCHAR NOT NULL,
+  course_id: VARCHAR NOT NULL,
+  complexity: ENUM('low', 'medium', 'high') NOT NULL,
+  ai_confidence: DECIMAL(3,2) NOT NULL, -- 0.00 to 1.00
+  suggested_skills: JSON NOT NULL, -- Array of skill names
+  analysis_status: ENUM('pending', 'analyzing', 'completed', 'error') DEFAULT 'pending',
+  created_at: TIMESTAMP DEFAULT NOW(),
+  updated_at: TIMESTAMP DEFAULT NOW(),
+  INDEX(course_id),
+  INDEX(quiz_id)
+}
 
 CANVAS API INTEGRATION:
 ======================
 
 1. AUTHENTICATION:
-- Use instructor Canvas API tokens
-- Validate tokens with Canvas API
-- Store token securely with encryption
+- Use instructor Canvas API tokens from user table
+- Validate tokens: GET https://canvas.instructure.com/api/v1/users/self
+- Store validation timestamp
 
 2. DATA RETRIEVAL:
-- Fetch instructor courses: GET /api/v1/courses
-- Fetch course quizzes: GET /api/v1/courses/:id/quizzes
-- Fetch quiz questions: GET /api/v1/quizzes/:id/questions
-- Handle Canvas API rate limits and pagination
+Canvas API Base: https://canvas.instructure.com/api/v1/
+- Courses: GET /courses (filter by enrollment_type=teacher)
+- Quizzes: GET /courses/:id/quizzes
+- Questions: GET /quizzes/:id/questions
 
 3. ERROR HANDLING:
-- Invalid/expired tokens
-- Canvas API downtime
-- Rate limit exceeded
-- Network connectivity issues
+- 401: Token expired/invalid → Update user record
+- 403: Insufficient permissions → Block access
+- 429: Rate limited → Implement backoff
+- 500: Canvas downtime → Return cached data
 
-SECURITY REQUIREMENTS:
-=====================
+SECURITY IMPLEMENTATION:
+=======================
 
-1. AUTHENTICATION:
-- JWT-based authentication
-- Token expiration and refresh
-- Role-based access control (instructor-only)
+1. ENCRYPTION:
+```python
+# Canvas token encryption
+from cryptography.fernet import Fernet
 
-2. DATA PROTECTION:
-- Encrypt Canvas API tokens
-- Secure password hashing (bcrypt)
-- Input validation and sanitization
-- SQL injection prevention
+def encrypt_canvas_token(token):
+    f = Fernet(os.environ['ENCRYPTION_KEY'])
+    return f.encrypt(token.encode()).decode()
 
-3. API SECURITY:
-- CORS configuration for frontend domain
-- Rate limiting on AI endpoints
-- Request size limits
-- Secure headers
+def decrypt_canvas_token(encrypted_token):
+    f = Fernet(os.environ['ENCRYPTION_KEY'])
+    return f.decrypt(encrypted_token.encode()).decode()
+```
 
-ERROR HANDLING REQUIREMENTS:
-===========================
+2. JWT TOKENS:
+```python
+# JWT implementation
+import jwt
+from datetime import datetime, timedelta
 
-1. API ERROR RESPONSES:
-- 400: Bad Request with specific error messages
-- 401: Unauthorized (invalid/expired token)
-- 403: Forbidden (insufficient permissions)
-- 404: Not Found
-- 429: Rate Limit Exceeded
-- 500: Internal Server Error
+def create_jwt_token(user):
+    payload = {
+        'user_id': user.id,
+        'role': user.role,
+        'canvas_token_type': user.canvas_token_type,
+        'exp': datetime.utcnow() + timedelta(hours=24)
+    }
+    return jwt.encode(payload, os.environ['JWT_SECRET'], algorithm='HS256')
+```
 
-2. AI SERVICE ERRORS:
-- Graceful degradation when AI services fail
-- Fallback to rule-based systems
-- Clear error messages to users
-- Retry logic for transient failures
+3. ROLE VALIDATION:
+```python
+def require_instructor(func):
+    def wrapper(*args, **kwargs):
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        payload = jwt.decode(token, os.environ['JWT_SECRET'])
+        
+        if payload['role'] != 'instructor':
+            return {'error': 'Instructor access required'}, 403
+            
+        if payload['canvas_token_type'] != 'instructor':
+            return {'error': 'Instructor Canvas token required'}, 403
+            
+        return func(*args, **kwargs)
+    return wrapper
+```
 
-3. CANVAS API ERRORS:
-- Handle Canvas API downtime
-- Token expiration handling
-- Rate limit management
-- Data validation for Canvas responses
+AI SERVICE CONFIGURATION:
+=========================
 
-PERFORMANCE REQUIREMENTS:
-========================
+1. OPENAI INTEGRATION:
+```python
+import openai
 
-1. API RESPONSE TIMES:
-- Authentication: < 200ms
-- Canvas data: < 1s
-- AI skill suggestions: < 3s
-- Bulk AI analysis: < 10s (for 50 questions)
+openai.api_key = os.environ['OPENAI_API_KEY']
 
-2. SCALABILITY:
-- Support multiple concurrent instructors
-- Efficient database queries
-- Caching for frequently accessed data
-- AI service load balancing
+def get_skill_suggestions(course_data):
+    prompt = f"""
+    Analyze this course and suggest 10-12 specific, measurable skills students should develop:
+    
+    Course: {course_data['courseName']}
+    Code: {course_data['courseCode']}
+    Description: {course_data.get('courseDescription', 'N/A')}
+    
+    Return JSON array with format:
+    [{{"skill": "Skill Name", "relevance": 0.95, "description": "Brief description"}}]
+    """
+    
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3
+    )
+    
+    return json.loads(response.choices[0].message.content)
+```
 
-3. OPTIMIZATION:
-- Database indexing on frequently queried fields
-- API response caching
-- Batch processing for bulk operations
-- Connection pooling
+2. ZERO-SHOT CLASSIFICATION:
+```python
+from transformers import pipeline
+
+classifier = pipeline("zero-shot-classification")
+
+def classify_question_skills(question_text, available_skills):
+    result = classifier(question_text, available_skills)
+    
+    # Return top 3 skills with confidence > 0.3
+    return [
+        skill for skill, score in zip(result['labels'], result['scores'])
+        if score > 0.3
+    ][:3]
+```
+
+ERROR HANDLING AND RESPONSES:
+============================
+
+1. STANDARD ERROR FORMAT:
+```json
+{
+  "error": true,
+  "message": "Descriptive error message",
+  "code": "ERROR_CODE",
+  "details": {}
+}
+```
+
+2. SUCCESS RESPONSE FORMAT:
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Optional success message"
+}
+```
 
 TESTING REQUIREMENTS:
 ====================
 
 1. UNIT TESTS:
-- All API endpoints
-- Authentication logic
-- AI service integrations
+- All endpoint handlers
+- AI service functions
 - Canvas API integration
+- Authentication middleware
 
 2. INTEGRATION TESTS:
-- End-to-end API workflows
-- Canvas API integration
-- AI service integration
+- Full API workflows
+- Canvas token validation
 - Database operations
+- AI service calls
 
 3. LOAD TESTS:
-- Concurrent user scenarios
+- Concurrent instructor access
 - Bulk AI processing
 - Canvas API rate limits
-- Database performance
 
-DEPLOYMENT REQUIREMENTS:
-=======================
+DEPLOYMENT CHECKLIST:
+====================
 
-1. ENVIRONMENT:
-- Deploy to Heroku (preferred) or compatible platform
-- Environment variables for configuration
-- Database migrations
-- AI service configuration
+1. ENVIRONMENT VARIABLES:
+```
+DATABASE_URL=postgresql://...
+JWT_SECRET=your-secret-key
+ENCRYPTION_KEY=your-encryption-key
+OPENAI_API_KEY=your-openai-key
+CANVAS_API_BASE=https://canvas.instructure.com/api/v1
+CORS_ORIGINS=https://achieveup-frontend.netlify.app
+```
 
-2. MONITORING:
-- API performance monitoring
-- Error tracking and logging
-- AI service health checks
-- Canvas API integration monitoring
+2. DATABASE MIGRATIONS:
+- Create tables with proper indexes
+- Set up foreign key constraints
+- Configure backup strategy
 
-3. BACKUP:
-- Database backup strategy
-- Data retention policies
-- Disaster recovery plan
-
-IMMEDIATE NEXT STEPS FOR BACKEND TEAM:
-=====================================
-
-1. SET UP PROJECT STRUCTURE:
-- Initialize backend project (Node.js/Python recommended)
-- Set up database (PostgreSQL/MongoDB)
-- Configure environment variables
-- Set up deployment pipeline
-
-2. IMPLEMENT CORE AUTHENTICATION:
-- User registration/login with instructor validation
-- JWT token management
-- Canvas token validation endpoint
-- Role-based access control
-
-3. CANVAS INTEGRATION:
-- Canvas API client setup
-- Course/quiz/question data retrieval
-- Token management and validation
-- Error handling for Canvas API
-
-4. BASIC AI ENDPOINTS:
-- Skill suggestion endpoint with rule-based fallback
-- Simple question analysis
-- Bulk assignment placeholder
-
-5. DATABASE SETUP:
-- Create required tables/collections
-- Set up migrations
-- Implement basic CRUD operations
-- Add indexes for performance
+3. MONITORING:
+- API endpoint performance
+- AI service availability
+- Canvas API integration health
+- Database query performance
 
 FRONTEND EXPECTATIONS:
 =====================
 
-The frontend is COMPLETE and expects:
-- All endpoints to return JSON responses
+The frontend expects:
+- All responses in JSON format
+- Proper HTTP status codes (200, 400, 401, 404, 500)
+- CORS headers for https://achieveup-frontend.netlify.app
 - Consistent error response format
-- Proper HTTP status codes
-- CORS configured for frontend domain
+- JWT tokens in Authorization header
 
-The frontend includes comprehensive error handling and will gracefully handle:
-- Backend service unavailability
-- AI service failures
-- Canvas API errors
-- Network connectivity issues
+IMMEDIATE IMPLEMENTATION PRIORITY:
+=================================
 
-SUPPORT:
-=======
+WEEK 1: Core Infrastructure
+□ Authentication endpoints with instructor validation
+□ Canvas API integration for courses/quizzes/questions
+□ Basic skill matrix CRUD operations
+□ Database setup and migrations
 
-For implementation questions:
-- Reference this document for exact requirements
-- Frontend source code is available for API contract details
-- Test with frontend locally during development
+WEEK 2: AI Integration  
+□ Skill suggestion AI endpoint with fallback logic
+□ Question analysis AI with zero-shot classification
+□ Bulk assignment AI processing
+□ Error handling and monitoring
 
-DELIVERY TIMELINE:
-=================
+WEEK 3: Advanced Features
+□ Analytics and reporting endpoints
+□ Performance optimization
+□ Advanced error handling
+□ Load testing and scaling
 
-PHASE 1 (Week 1): Authentication + Canvas Integration
-PHASE 2 (Week 2): Basic AI Endpoints + Skill Matrix
-PHASE 3 (Week 3): Advanced AI + Analytics
-PHASE 4 (Week 4): Testing + Performance Optimization
+WEEK 4: Production Deployment
+□ Security hardening
+□ Monitoring and logging
+□ Documentation updates
+□ Go-live preparation
 
-The frontend is ready for production deployment once these backend requirements are implemented. 
+SUCCESS METRICS:
+===============
+
+The backend implementation will be successful when:
+
+1. **Instructors can**: Create accounts, log in, and access their Canvas courses
+2. **AI features work**: Skill suggestions and question analysis provide accurate results
+3. **Data flows**: Skill matrices and assignments are properly stored and retrieved
+4. **Analytics function**: Student progress data is aggregated and visualized
+5. **System scales**: Handles multiple concurrent users and large datasets
+6. **Security is robust**: Tokens are encrypted, access is properly controlled
+7. **Integration is seamless**: Frontend and backend work together flawlessly
+
+The frontend is production-ready and will gracefully handle backend unavailability with appropriate error messages and fallbacks. 

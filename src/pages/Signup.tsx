@@ -1,9 +1,11 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Eye, EyeOff, Key, AlertCircle } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { Eye, EyeOff, Lock, Mail, User, BookOpen, Key } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import Button from '../components/common/Button';
+import Card from '../components/common/Card';
 
 interface SignupFormInputs {
   name: string;
@@ -14,16 +16,16 @@ interface SignupFormInputs {
 }
 
 const Signup: React.FC = () => {
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
     watch,
+    formState: { errors, isSubmitting }
   } = useForm<SignupFormInputs>();
 
   const password = watch('password');
@@ -47,102 +49,101 @@ const Signup: React.FC = () => {
   };
 
   const getCanvasTokenInstructions = () => (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-2">
-      <div className="flex items-center mb-2">
-        <Key className="w-4 h-4 text-blue-600 mr-2" />
-        <h4 className="text-sm font-medium text-blue-900">Canvas API Token Instructions</h4>
-      </div>
-      <div className="text-sm text-blue-800 space-y-2">
-        <p><strong>To get your Canvas instructor token:</strong></p>
-        <ol className="list-decimal list-inside space-y-1 ml-2">
-          <li>Log into your Canvas account as an instructor</li>
-          <li>Go to Account → Settings</li>
-          <li>Scroll down to "Approved Integrations"</li>
-          <li>Click "+ New Access Token"</li>
-          <li>Enter "AchieveUp" as the purpose</li>
-          <li>Leave expiry blank (or set future date)</li>
-          <li>Click "Generate Token"</li>
-          <li>Copy the token and paste it above</li>
-        </ol>
-        <div className="flex items-center mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
-          <AlertCircle className="w-4 h-4 text-yellow-600 mr-2 flex-shrink-0" />
-          <p className="text-xs text-yellow-800">
-            <strong>Important:</strong> You must be an instructor in Canvas to use this application.
-            Student tokens will not work.
-          </p>
-        </div>
-      </div>
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+      <h3 className="text-sm font-medium text-blue-900 mb-2">How to get your Canvas API Token:</h3>
+      <ol className="text-sm text-blue-800 space-y-1">
+        <li>1. Log into your Canvas LMS account</li>
+        <li>2. Go to Account → Settings → Approved Integrations</li>
+        <li>3. Click "New Access Token"</li>
+        <li>4. Give it a name like "AchieveUp Integration"</li>
+        <li>5. Set expiration to "Never" or choose a date</li>
+        <li>6. Copy the generated token (it starts with numbers/letters)</li>
+        <li>7. Paste it in the field below</li>
+      </ol>
+      <p className="text-xs text-blue-600 mt-2">
+        <strong>Note:</strong> You must be an instructor in Canvas to use this system.
+      </p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-ucf-black via-gray-900 to-ucf-black flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-12 w-12 bg-ucf-gold rounded-lg flex items-center justify-center">
-            <GraduationCap className="h-8 w-8 text-ucf-black" />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center mb-4">
+              <BookOpen className="w-12 h-12 text-primary-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Create Instructor Account
+            </h1>
+            <p className="text-gray-600">
+              Join AchieveUp to track student skills with AI
+            </p>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-            Create Instructor Account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-300">
-            Register as an instructor to manage courses and track student progress
-          </p>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          {/* Canvas Token Instructions */}
+          {getCanvasTokenInstructions()}
+
+          {/* Signup Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Full Name
               </label>
-              <input
-                {...register('name', {
-                  required: 'Full name is required',
-                  minLength: {
-                    value: 2,
-                    message: 'Name must be at least 2 characters'
-                  }
-                })}
-                type="text"
-                autoComplete="name"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ucf-gold focus:border-ucf-gold"
-                placeholder="Dr. John Smith"
-              />
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  {...register('name', { 
+                    required: 'Name is required',
+                    minLength: {
+                      value: 2,
+                      message: 'Name must be at least 2 characters'
+                    }
+                  })}
+                  type="text"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter your full name"
+                />
+              </div>
               {errors.name && (
-                <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
               </label>
-              <input
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email address'
-                  }
-                })}
-                type="email"
-                autoComplete="email"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ucf-gold focus:border-ucf-gold"
-                placeholder="instructor@ucf.edu"
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  {...register('email', { 
+                    required: 'Email is required',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Please enter a valid email address'
+                    }
+                  })}
+                  type="email"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter your email address"
+                />
+              </div>
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
-              <div className="mt-1 relative">
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  {...register('password', {
+                  {...register('password', { 
                     required: 'Password is required',
                     minLength: {
                       value: 8,
@@ -154,112 +155,128 @@ const Signup: React.FC = () => {
                     }
                   })}
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ucf-gold focus:border-ucf-gold"
-                  placeholder="Enter a strong password"
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Create a strong password"
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
+                    <EyeOff className="w-5 h-5" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
+                    <Eye className="w-5 h-5" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm Password
               </label>
-              <div className="mt-1 relative">
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  {...register('confirmPassword', {
+                  {...register('confirmPassword', { 
                     required: 'Please confirm your password',
-                    validate: (value) =>
-                      value === password || 'Passwords do not match'
+                    validate: value => value === password || 'Passwords do not match'
                   })}
                   type={showConfirmPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ucf-gold focus:border-ucf-gold"
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Confirm your password"
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
+                    <EyeOff className="w-5 h-5" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
+                    <Eye className="w-5 h-5" />
                   )}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+                <p className="text-red-600 text-sm mt-1">{errors.confirmPassword.message}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="canvasApiToken" className="block text-sm font-medium text-gray-700">
-                Canvas Instructor API Token
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Canvas API Token
               </label>
-              <input
-                {...register('canvasApiToken', {
-                  required: 'Canvas API token is required',
-                  minLength: {
-                    value: 60,
-                    message: 'Canvas token should be around 69 characters'
-                  }
-                })}
-                type="password"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ucf-gold focus:border-ucf-gold font-mono text-sm"
-                placeholder="Enter your Canvas instructor API token"
-              />
+              <div className="relative">
+                <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  {...register('canvasApiToken', { 
+                    required: 'Canvas API token is required',
+                    minLength: {
+                      value: 64,
+                      message: 'Canvas API token must be at least 64 characters'
+                    }
+                  })}
+                  type="password"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Paste your Canvas API token"
+                />
+              </div>
               {errors.canvasApiToken && (
-                <p className="mt-1 text-sm text-red-600">{errors.canvasApiToken.message}</p>
+                <p className="text-red-600 text-sm mt-1">{errors.canvasApiToken.message}</p>
               )}
-              {getCanvasTokenInstructions()}
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-ucf-black bg-ucf-gold hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ucf-gold disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-              >
-                {isSubmitting ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-ucf-black"></div>
-                ) : (
-                  'Create Instructor Account'
-                )}
-              </button>
-            </div>
-
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Already have an instructor account?{' '}
-                <Link to="/login" className="font-medium text-ucf-gold hover:text-yellow-600 transition-colors duration-200">
-                  Sign in here
-                </Link>
-              </p>
-            </div>
+            <Button
+              type="submit"
+              loading={isSubmitting}
+              disabled={isSubmitting}
+              className="w-full"
+            >
+              Create Account
+            </Button>
           </form>
-        </div>
 
-        <div className="text-center">
-          <p className="text-xs text-gray-400">
-            AchieveUp Instructor Portal - UCF Integration
-          </p>
-        </div>
+          {/* Login Link */}
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              Already have an account?{' '}
+              <Link 
+                to="/login" 
+                className="text-primary-600 hover:text-primary-700 font-medium"
+              >
+                Sign in
+              </Link>
+            </p>
+          </div>
+
+          {/* Features Preview */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-sm font-medium text-gray-900 mb-3">What you'll get:</h3>
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center">
+                <div className="w-2 h-2 bg-primary-600 rounded-full mr-3"></div>
+                AI-powered skill suggestions for your courses
+              </div>
+              <div className="flex items-center">
+                <div className="w-2 h-2 bg-primary-600 rounded-full mr-3"></div>
+                Zero-shot classification for quiz questions
+              </div>
+              <div className="flex items-center">
+                <div className="w-2 h-2 bg-primary-600 rounded-full mr-3"></div>
+                Track student progress and skill mastery
+              </div>
+              <div className="flex items-center">
+                <div className="w-2 h-2 bg-primary-600 rounded-full mr-3"></div>
+                Comprehensive analytics and insights
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
