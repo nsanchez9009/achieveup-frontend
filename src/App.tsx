@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { CheckCircle, AlertTriangle } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
@@ -115,7 +116,6 @@ const StudentProgress: React.FC = () => {
   };
 
   const getRiskIcon = (riskLevel: 'low' | 'medium' | 'high') => {
-    const { CheckCircle, AlertTriangle } = require('lucide-react');
     switch (riskLevel) {
       case 'low': return <CheckCircle className="w-3 h-3 mr-1" />;
       case 'medium': case 'high': return <AlertTriangle className="w-3 h-3 mr-1" />;
