@@ -72,7 +72,7 @@ const StudentProgress: React.FC = () => {
       if (response.data.length > 0) {
         setSelectedCourse(response.data[0].id);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading courses:', err);
       setError('Failed to load courses. Please check your Canvas integration.');
     } finally {
@@ -84,12 +84,21 @@ const StudentProgress: React.FC = () => {
     try {
       setLoading(true);
       setError('');
+      
       const { instructorAPI } = await import('./services/api');
       const response = await instructorAPI.getCourseStudentAnalytics(courseId);
-      setStudentData(response.data);
-    } catch (err) {
+      
+      // Check if we have actual student data
+      if (response.data && response.data.students && response.data.students.length > 0) {
+        setStudentData(response.data);
+      } else {
+        // API succeeded but no students - this means we need to set up skill matrix and assignments
+        setStudentData({ students: [], skillDistribution: {}, averageScores: {} });
+        setError('');
+      }
+    } catch (err: any) {
       console.error('Error loading student data:', err);
-      setError('Failed to load student data. This may be because no skill matrix or assignments exist for this course yet.');
+      setError(`Failed to load student data. ${err.response?.status === 404 ? 'No data found for this course.' : 'Please try again.'}`);
       setStudentData(null);
     } finally {
       setLoading(false);
@@ -325,29 +334,57 @@ const StudentProgress: React.FC = () => {
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-gray-400 text-2xl">📊</span>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Student Data Available</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Student Progress Data Yet</h2>
           <p className="text-gray-600 mb-6">
-            Student progress will appear here once you create a skill matrix and assign skills to quiz questions.
+            Student progress tracking requires completing the skill mapping workflow first.
           </p>
-          <div className="space-y-3">
-            <div className="flex items-center justify-center">
-              <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3">
-                <span className="text-xs font-bold text-blue-800">1</span>
+          
+          <div className="max-w-md mx-auto bg-blue-50 rounded-lg p-6 mb-6">
+            <h3 className="text-lg font-medium text-blue-900 mb-4">Complete Setup Steps:</h3>
+            <div className="space-y-4 text-left">
+              <div className="flex items-start">
+                <div className="w-6 h-6 bg-green-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                  <span className="text-xs font-bold text-green-800">✓</span>
+                </div>
+                <div>
+                  <p className="text-green-800 font-medium">Skill matrix created</p>
+                  <p className="text-green-600 text-sm">Skills are defined for this course</p>
+                </div>
               </div>
-              <p className="text-blue-800">First, create a skill matrix for your course</p>
-            </div>
-            <div className="flex items-center justify-center">
-              <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3">
-                <span className="text-xs font-bold text-blue-800">2</span>
+              <div className="flex items-start">
+                <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                  <span className="text-xs font-bold text-blue-800">2</span>
+                </div>
+                <div>
+                  <p className="text-blue-800 font-medium">Assign skills to quiz questions</p>
+                  <p className="text-blue-600 text-sm">Map quiz questions to specific skills</p>
+                </div>
               </div>
-              <p className="text-blue-800">Then, assign skills to quiz questions</p>
-            </div>
-            <div className="flex items-center justify-center">
-              <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3">
-                <span className="text-xs font-bold text-blue-800">3</span>
+              <div className="flex items-start">
+                <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                  <span className="text-xs font-bold text-gray-600">3</span>
+                </div>
+                <div>
+                  <p className="text-gray-700 font-medium">Students complete assessments</p>
+                  <p className="text-gray-600 text-sm">Progress data will appear automatically</p>
+                </div>
               </div>
-              <p className="text-blue-800">Student progress will appear here as they complete assessments</p>
             </div>
+          </div>
+
+          <div className="space-x-4">
+            <a
+              href="/skill-assignment"
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-ucf-gold hover:bg-yellow-600 transition-colors"
+            >
+              Assign Skills to Questions
+            </a>
+            <a
+              href="/skill-matrix"
+              className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            >
+              Manage Skill Matrix
+            </a>
           </div>
         </div>
       )}
