@@ -88,14 +88,16 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
         courseDescription: selectedCourseData.description
       });
       
-      setSkillSuggestions(response.data);
+      // Handle the new backend response format
+      const suggestions = Array.isArray(response.data) ? response.data : (response.data as any).suggestedSkills || [];
+      setSkillSuggestions(suggestions);
       
       // Auto-select all suggestions as starting point
-      const suggestedSkills = response.data.map((s: SkillSuggestion) => s.skill);
+      const suggestedSkills = suggestions.map((s: SkillSuggestion) => s.skill);
       setFinalSkills(suggestedSkills);
       
       setStep('review-skills');
-      toast.success(`Got ${response.data.length} skill suggestions for ${selectedCourseData.name}`);
+      toast.success(`Got ${suggestions.length} skill suggestions for ${selectedCourseData.name}`);
     } catch (error) {
       console.error('Error getting skill suggestions:', error);
       toast.error('Failed to get skill suggestions. You can add skills manually.');

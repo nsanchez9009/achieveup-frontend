@@ -66,13 +66,13 @@ api.interceptors.response.use(
 // Skill Matrix Management
 export const skillMatrixAPI = {
   create: (data: CreateSkillMatrixRequest): Promise<AxiosResponse<SkillMatrix>> => 
-    api.post('/achieveup/matrix/create', data),
-  get: (matrixId: string): Promise<AxiosResponse<SkillMatrix>> => 
-    api.get(`/achieveup/matrix/${matrixId}`),
+    api.post('/instructor/skill-matrix/create', data),
+  get: (courseId: string): Promise<AxiosResponse<SkillMatrix>> => 
+    api.get(`/instructor/skill-matrix/${courseId}`),
   update: (matrixId: string, data: UpdateSkillMatrixRequest): Promise<AxiosResponse<SkillMatrix>> => 
-    api.put(`/achieveup/matrix/${matrixId}`, data),
+    api.put(`/instructor/skill-matrix/${matrixId}`, data),
   getSkillSuggestions: (data: { courseId: string; courseName: string; courseCode: string; courseDescription?: string }): Promise<AxiosResponse<any[]>> => 
-    api.post('/achieveup/ai/suggest-skills', data),
+    api.post('/instructor/ai/suggest-skills', data),
 };
 
 // Skill Assignment
@@ -82,9 +82,9 @@ export const skillAssignmentAPI = {
   suggest: (data: SkillSuggestionRequest): Promise<AxiosResponse<string[]>> => 
     api.post('/achieveup/skills/suggest', data),
   analyzeQuestions: (data: { courseId: string; quizId: string; questions: any[] }): Promise<AxiosResponse<any[]>> => 
-    api.post('/achieveup/ai/analyze-questions', data),
+    api.post('/instructor/analyze-questions-with-ai', { questions: data.questions }),
   bulkAssignWithAI: (data: { courseId: string; quizId: string }): Promise<AxiosResponse<any>> => 
-    api.post('/achieveup/ai/bulk-assign', data),
+    api.post('/instructor/bulk-assign-skills-with-ai', data),
 };
 
 // Badge Management
@@ -214,15 +214,15 @@ export const instructorAPI = {
 export const canvasInstructorAPI = {
   // Get all courses the instructor teaches
   getInstructorCourses: (): Promise<AxiosResponse<CanvasCourse[]>> => 
-    api.get('/canvas/instructor/courses'),
+    api.get('/instructor/courses'),
   
   // Get quizzes for a specific course (instructor view)
   getInstructorQuizzes: (courseId: string): Promise<AxiosResponse<CanvasQuiz[]>> => 
-    api.get(`/canvas/instructor/courses/${courseId}/quizzes`),
+    api.get(`/instructor/courses/${courseId}/quizzes`),
   
   // Get questions for a specific quiz (instructor view)
   getInstructorQuestions: (quizId: string): Promise<AxiosResponse<CanvasQuestion[]>> => 
-    api.get(`/canvas/instructor/quizzes/${quizId}/questions`),
+    api.get(`/instructor/quizzes/${quizId}/questions`),
   
   // Get student submissions for a quiz
   getQuizSubmissions: (quizId: string): Promise<AxiosResponse<any[]>> => 
