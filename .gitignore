@@ -50,4 +50,7 @@ INTEGRATION_TEST_GUIDE.txt
 FINAL_STATUS_UPDATE.md
 
 # Comprehensive test report (internal documentation)
-COMPREHENSIVE_TEST_REPORT.md 
+COMPREHENSIVE_TEST_REPORT.md
+
+# Backend mock data requirements (internal communication)
+BACKEND_MOCK_DATA_REQUIREMENTS.txt 
