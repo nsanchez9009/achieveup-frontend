@@ -39,7 +39,7 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -56,8 +56,7 @@ api.interceptors.response.use(
   (error) => {
     // Only redirect to login for 401 errors, not network errors
     if (error.response?.status === 401 && !error.code) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userData');
+      localStorage.removeItem('token');
       window.location.href = '/login';
     }
     return Promise.reject(error);
