@@ -32,4 +32,7 @@ yarn-error.log*
 Thumbs.db
 
 # Backend implementation guide (internal use only)
-backend-implementation-guide.txt 
+backend-implementation-guide.txt
+
+# Frontend status report (internal use only)
+FRONTEND-STATUS.md 
