@@ -36,7 +36,6 @@ const Navigation: React.FC = () => {
                 <span className="text-ucf-black font-bold text-lg">A</span>
               </div>
               <span className="ml-2 text-xl font-bold text-gray-900">AchieveUp</span>
-              <span className="ml-2 text-sm text-gray-500 hidden lg:inline">Instructor Portal</span>
             </Link>
 
             {/* Desktop Navigation */}
@@ -66,7 +65,7 @@ const Navigation: React.FC = () => {
 
           {/* User Menu */}
           <div className="flex items-center">
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-6">
               {/* Backend Status Indicator */}
               <div className="flex items-center space-x-1">
                 {backendAvailable ? (
@@ -87,13 +86,6 @@ const Navigation: React.FC = () => {
               </div>
               
               <div className="flex items-center space-x-2">
-                <User className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                <span 
-                  className="text-sm text-gray-700 max-w-32 truncate cursor-help" 
-                  title={user?.name || user?.email || 'Instructor'}
-                >
-                  {user?.name || user?.email || 'Instructor'}
-                </span>
                 <span className="text-xs text-ucf-gold bg-ucf-gold bg-opacity-10 px-2 py-1 rounded-full">
                   Instructor
                 </span>

@@ -207,21 +207,6 @@ const Dashboard: React.FC = () => {
 
   const quickActions = isInstructor ? instructorQuickActions : studentQuickActions;
 
-  // State and effect for AI-Suggested Skills (Test)
-  const [aiSuggestedSkills, setAiSuggestedSkills] = useState<string[]>([]);
-  const [aiSkillsLoading, setAiSkillsLoading] = useState(true);
-
-  // TODO: Replace with real AI-generated skills once backend/API is ready.
-  useEffect(() => {
-    setAiSkillsLoading(true);
-    // Simulate API call for course "Intro to Computer Science"
-    const timer = setTimeout(() => {
-      setAiSuggestedSkills(["Algorithms", "Variables", "Loops"]);
-      setAiSkillsLoading(false);
-    }, 1200); // 1.2s delay
-    return () => clearTimeout(timer);
-  }, []);
-
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -338,18 +323,18 @@ const Dashboard: React.FC = () => {
 
       {/* Quick Actions */}
       <Card title="Quick Actions" className="mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (
               <Link
                 key={index}
                 to={action.href}
-                className="group block p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-md transition-all duration-200"
+                className="group block p-6 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-md transition-all duration-200"
               >
                 <div className="flex items-center">
-                  <div className={`w-10 h-10 ${action.color} rounded-lg flex items-center justify-center mr-3 group-hover:scale-110 transition-transform duration-200`}>
-                    <Icon className="w-5 h-5 text-white" />
+                  <div className={`w-12 h-12 ${action.color} rounded-lg flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-200`}>
+                    <Icon className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-900 group-hover:text-gray-700">
@@ -366,105 +351,8 @@ const Dashboard: React.FC = () => {
         </div>
       </Card>
 
-      {/* AI-Suggested Skills (Test) - Temporary Section */}
-      <div className="mb-8">
-        <div className="bg-white rounded-lg shadow-sm px-6 py-6 flex flex-col text-left">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">AI-Suggested Skills (Test)</h2>
-          <div className="mb-4 text-gray-500 text-sm">Course: <span className="font-medium text-gray-700">Intro to Computer Science</span></div>
-          {aiSkillsLoading ? (
-            <div className="text-gray-400 italic py-4">Loading suggestions...</div>
-          ) : (
-            <ul className="list-disc pl-4 text-gray-800 space-y-1">
-              {aiSuggestedSkills.map((skill, idx) => (
-                <li key={idx}>{skill}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card title="Recent Activity">
-          {(isInstructor ? instructorStats.recentActivity : stats.recentActivity).length > 0 ? (
-            <div className="space-y-4">
-              {(isInstructor ? instructorStats.recentActivity : stats.recentActivity).map((activity, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
-                    {activity.type === 'badge' && <Award className="w-5 h-5 text-yellow-600" />}
-                    {activity.type === 'progress' && <TrendingUp className="w-5 h-5 text-green-600" />}
-                    {activity.type === 'assessment' && <Target className="w-5 h-5 text-blue-600" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                    <p className="text-sm text-gray-600">{activity.description}</p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-gray-400 mb-2">
-                {isInstructor ? <Users className="w-8 h-8 mx-auto" /> : <Award className="w-8 h-8 mx-auto" />}
-              </div>
-              <p className="text-gray-600">
-                {isInstructor 
-                  ? 'No recent activity. Start by creating a skill matrix for your course.'
-                  : 'No recent activity. Complete assessments to see your progress here.'
-                }
-              </p>
-            </div>
-          )}
-        </Card>
 
-        {/* Courses */}
-        <Card title={isInstructor ? "Your Courses" : "Enrolled Courses"}>
-          {courses.length > 0 ? (
-            <div className="space-y-3">
-              {courses.slice(0, 5).map((course) => (
-                <div key={course.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <h4 className="font-medium text-gray-900">{course.name}</h4>
-                    <p className="text-sm text-gray-600">{course.code}</p>
-                  </div>
-                  <Link
-                    to={isInstructor ? `/analytics?courseId=${course.id}` : `/progress?courseId=${course.id}`}
-                    className="text-sm text-primary-600 hover:text-primary-800"
-                  >
-                    {isInstructor ? 'View Analytics' : 'View Progress'}
-                  </Link>
-                </div>
-              ))}
-              {courses.length > 5 && (
-                <div className="text-center pt-2">
-                  <Link to="/settings" className="text-sm text-primary-600 hover:text-primary-800">
-                    View all {courses.length} courses
-                  </Link>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-gray-400 mb-2">
-                <Home className="w-8 h-8 mx-auto" />
-              </div>
-              <p className="text-gray-600 mb-4">
-                {isInstructor 
-                  ? 'No courses found. Make sure your Canvas instructor token is set up correctly.'
-                  : 'No courses found. Make sure your Canvas student token is set up correctly.'
-                }
-              </p>
-              <Link
-                to="/settings"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Configure Canvas Token
-              </Link>
-            </div>
-          )}
-        </Card>
-      </div>
+
     </div>
   );
 };
