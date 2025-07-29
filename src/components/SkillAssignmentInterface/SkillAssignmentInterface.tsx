@@ -95,6 +95,30 @@ const SkillAssignmentInterface: React.FC = () => {
       return;
     }
 
+    // Detailed validation before making API call
+    if (!selectedCourse) {
+      toast.error('No course selected. Please select a course first.');
+      return;
+    }
+
+    if (!selectedQuiz) {
+      toast.error('No quiz selected. Please select a quiz first.');
+      return;
+    }
+
+    if (!questions || questions.length === 0) {
+      toast.error('No questions available for analysis. Please select a quiz with questions.');
+      return;
+    }
+
+    // Log request details for debugging
+    console.log('Starting AI analysis with:', {
+      courseId: selectedCourse,
+      quizId: selectedQuiz,
+      questionsCount: questions.length,
+      questionIds: questions.map(q => q.id)
+    });
+
     setAutoAnalysisInProgress(true);
     
     try {
@@ -105,28 +129,48 @@ const SkillAssignmentInterface: React.FC = () => {
       });
       setAiAnalysisStatus(initialStatus);
 
-      // Call backend for AI analysis
-      const response = await skillAssignmentAPI.analyzeQuestions({
+      // Prepare and validate request data
+      const requestData = {
         courseId: selectedCourse,
         quizId: selectedQuiz,
         questions: questions.map(q => ({ 
           id: q.id, 
-          text: q.question_text,
-          type: q.question_type,
-          points: q.points
+          text: q.question_text || '',
+          type: q.question_type || 'multiple_choice_question',
+          points: q.points || 1
         }))
-      });
+      };
+
+      // Log the exact request being sent
+      console.log('Sending AI analysis request:', requestData);
+
+      // Validate request data structure
+      if (!requestData.courseId) {
+        throw new Error('Missing courseId in request');
+      }
+      if (!requestData.quizId) {
+        throw new Error('Missing quizId in request');
+      }
+      if (!requestData.questions || requestData.questions.length === 0) {
+        throw new Error('Missing or empty questions array in request');
+      }
+
+      // Call backend for AI analysis
+      const response = await skillAssignmentAPI.analyzeQuestions(requestData);
       
+      console.log('AI analysis response:', response.data);
       setQuestionAnalysis(response.data);
       
       // Update suggestions and status based on AI analysis
       const newSuggestions: Suggestions = {};
       const completedStatus: AIAnalysisStatus = {};
       
-      response.data.forEach(analysis => {
-        newSuggestions[analysis.questionId] = analysis.suggestedSkills;
-        completedStatus[analysis.questionId] = 'completed';
-      });
+      if (Array.isArray(response.data)) {
+        response.data.forEach(analysis => {
+          newSuggestions[analysis.questionId] = analysis.suggestedSkills || [];
+          completedStatus[analysis.questionId] = 'completed';
+        });
+      }
       
       setSuggestions(newSuggestions);
       setAiAnalysisStatus(completedStatus);
@@ -134,13 +178,34 @@ const SkillAssignmentInterface: React.FC = () => {
       // Debug information for user
       const totalSuggestions = Object.values(newSuggestions).reduce((acc, skills) => acc + skills.length, 0);
       if (totalSuggestions === 0) {
-        toast.error(`⚠️ AI analysis completed but returned no skill suggestions. This is a backend issue - the AI service is not providing skill recommendations.`);
+        toast.error(`⚠️ AI analysis completed but returned no skill suggestions. The backend processed ${questions.length} questions but didn't return any skill recommendations.`);
       } else {
         toast.success(`AI analyzed ${questions.length} questions and provided ${totalSuggestions} skill suggestions`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error analyzing questions with AI:', error);
-      toast.error('AI analysis failed. Please try manual skill assignment.');
+      
+      // Detailed error handling based on status code
+      if (error.response?.status === 400) {
+        const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Bad request format';
+        toast.error(`AI analysis failed (400): ${errorMsg}. Check console for request details.`);
+        console.error('400 Error details:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          config: {
+            url: error.response.config?.url,
+            method: error.response.config?.method,
+            data: error.response.config?.data
+          }
+        });
+      } else if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please check your instructor token in Settings.');
+      } else if (error.response?.status === 403) {
+        toast.error('Access denied. Instructor permissions required.');
+      } else {
+        toast.error(`AI analysis failed: ${error.message || 'Unknown error'}. Please try manual skill assignment.`);
+      }
       
       // Set error status for all questions
       const errorStatus: AIAnalysisStatus = {};
