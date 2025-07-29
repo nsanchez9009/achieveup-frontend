@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Lightbulb, Save, Download, Upload, Zap, Target, Brain, CheckCircle, AlertCircle, Clock, BookOpen } from 'lucide-react';
+import { Lightbulb, Save, Zap, Target, Brain, CheckCircle, AlertCircle, Clock, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { skillAssignmentAPI, canvasAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -338,44 +338,6 @@ const SkillAssignmentInterface: React.FC = () => {
     toast.success(`Assigned ${assignedCount} skills from AI suggestions`);
   };
 
-  const exportAssignments = () => {
-    const exportData = {
-      courseId: selectedCourse,
-      quizId: selectedQuiz,
-      assignments: questionSkills,
-      metadata: {
-        exportedAt: new Date().toISOString(),
-        questionCount: questions.length,
-        totalSkills: Object.values(questionSkills).reduce((acc, skills) => acc + skills.length, 0)
-      }
-    };
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `skill-assignments-${selectedCourse}-${selectedQuiz}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importAssignments = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const importData = JSON.parse(e.target?.result as string);
-        setQuestionSkills(importData.assignments || {});
-        toast.success('Skill assignments imported successfully');
-      } catch (error) {
-        toast.error('Failed to import assignments. Invalid file format.');
-      }
-    };
-    reader.readAsText(file);
-  };
-
   const getFilteredQuestions = () => {
     if (!Array.isArray(questions)) {
       return [];
@@ -677,7 +639,7 @@ const SkillAssignmentInterface: React.FC = () => {
                       <Button
                         type="button"
                         onClick={bulkAssignFromSuggestions}
-                        disabled={Object.keys(suggestions).length === 0}
+                        disabled={Object.values(suggestions).every(arr => arr.length === 0)}
                         variant="secondary"
                         size="sm"
                       >
@@ -844,36 +806,8 @@ const SkillAssignmentInterface: React.FC = () => {
                   })}
                 </div>
 
-                {/* Export/Import Controls */}
-                <div className="flex justify-between items-center pt-6 border-t border-gray-200">
-                  <div className="flex space-x-3">
-                    <Button
-                      type="button"
-                      onClick={exportAssignments}
-                      variant="outline"
-                      className="flex items-center"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Export
-                    </Button>
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept=".json"
-                        onChange={importAssignments}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex items-center pointer-events-none"
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Import
-                      </Button>
-                    </label>
-                  </div>
-
+                {/* Save Button */}
+                <div className="flex justify-end pt-6 border-t border-gray-200">
                   <Button
                     type="submit"
                     loading={loading}
