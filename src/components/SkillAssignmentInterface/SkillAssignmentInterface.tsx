@@ -344,6 +344,15 @@ const SkillAssignmentInterface: React.FC = () => {
       setLoadingMatrices(true);
       console.log(`Loading skill matrices for course: ${courseId}`);
       
+      // Debug: Check authentication status
+      const token = localStorage.getItem('token');
+      console.log('Authentication debug:', {
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        tokenPreview: token ? `${token.substring(0, 10)}...` : 'No token',
+        courseId: courseId
+      });
+      
       const response = await skillMatrixAPI.getAllByCourse(courseId);
       console.log(`Skill matrices API response for course ${courseId}:`, response.data);
       
@@ -400,10 +409,41 @@ const SkillAssignmentInterface: React.FC = () => {
         setSelectedMatrix('');
         setSelectedMatrixData(null);
       } else if (error.response?.status === 403) {
-        toast.error('Access denied. You may not have permission to view matrices for this course.');
-        setAvailableMatrices([]);
-        setSelectedMatrix('');
-        setSelectedMatrixData(null);
+        console.error('403 Forbidden Error Details:', {
+          message: error.response?.data?.message || 'No error message provided',
+          error: error.response?.data?.error || 'No error details',
+          url: error.response?.config?.url,
+          method: error.response?.config?.method,
+          headers: error.response?.config?.headers,
+          courseId: courseId
+        });
+        
+        // Check if it's a token issue vs permission issue
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error('No authentication token found. Please log in again.');
+        } else {
+          toast.error(
+            <div className="space-y-2">
+              <p><strong>Access Denied (403 Forbidden)</strong></p>
+              <p className="text-sm">Your instructor token may not have permission to access matrices for this course.</p>
+              <p className="text-sm">Please check your Canvas instructor permissions or try refreshing your token in Settings.</p>
+            </div>,
+            { duration: 8000 }
+          );
+        }
+        
+        // Provide mock matrices so user can still test the interface
+        console.log('Providing mock matrices due to 403 error');
+        const mockMatrices = generateMockMatrices(courseId);
+        setAvailableMatrices(mockMatrices);
+        if (mockMatrices.length > 0) {
+          setSelectedMatrix(mockMatrices[0]._id);
+          setSelectedMatrixData(mockMatrices[0]);
+          toast.success(`Demo matrices loaded for testing. Fix authentication to access real data.`, {
+            duration: 6000
+          });
+        }
       } else if (error.response?.status >= 500) {
         toast.error('Server error while loading matrices. Using demo data for testing.');
         
@@ -751,6 +791,52 @@ const SkillAssignmentInterface: React.FC = () => {
     );
   }
 
+  // Token validation utility to help debug authentication issues
+  const validateAndTestToken = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No authentication token found');
+        toast.error('Please log in to access skill matrices.');
+        return false;
+      }
+
+      console.log('Testing authentication token...');
+      
+      // Test token with a simple API call
+      const { authAPI } = await import('../../services/api');
+      const userResponse = await authAPI.me();
+      
+      console.log('Token validation successful:', {
+        user: userResponse.data.user || userResponse.data,
+        tokenValid: true
+      });
+      
+      // Check if user has instructor permissions
+      const userData = userResponse.data.user || userResponse.data;
+      if (userData.canvasTokenType !== 'instructor' && userData.role !== 'instructor') {
+        toast.error('Instructor permissions required. Please check your account type.');
+        return false;
+      }
+      
+      toast.success('Authentication verified. Instructor permissions confirmed.');
+      return true;
+      
+    } catch (error: any) {
+      console.error('Token validation failed:', error);
+      
+      if (error.response?.status === 401) {
+        toast.error('Authentication token is invalid or expired. Please log in again.');
+      } else if (error.response?.status === 403) {
+        toast.error('Your account does not have instructor permissions.');
+      } else {
+        toast.error('Failed to validate authentication. Please check your connection.');
+      }
+      
+      return false;
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       <Card
@@ -778,6 +864,14 @@ const SkillAssignmentInterface: React.FC = () => {
                 {errors.courseId && (
                   <p className="mt-1 text-sm text-red-600">{errors.courseId.message}</p>
                 )}
+                {/* Debug: Authentication Test Button */}
+                <button
+                  type="button"
+                  onClick={validateAndTestToken}
+                  className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  🔍 Test Authentication
+                </button>
               </div>
 
               <div>
