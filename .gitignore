@@ -69,3 +69,9 @@ BACKEND_AI_ANALYSIS_400_DEBUG.txt
 
 # Backend matrix API missing endpoint issue (internal communication)
 BACKEND_MATRIX_API_MISSING.txt 
+
+# Backend matrix naming conflict issue (internal communication)
+BACKEND_MATRIX_NAMING_CONFLICT.txt
+
+# Backend fixes verification report (internal communication)
+BACKEND_FIXES_VERIFICATION.txt 
