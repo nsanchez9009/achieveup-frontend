@@ -185,6 +185,7 @@ const SkillAssignmentInterface: React.FC = () => {
     } finally {
       setAutoAnalysisInProgress(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInstructor, selectedCourse, selectedQuiz]);
 
   // Generate intelligent mock suggestions based on question content and available skills
@@ -335,6 +336,7 @@ const SkillAssignmentInterface: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInstructor, setValue]);
 
   const loadSkillMatrices = async (courseId: string) => {
