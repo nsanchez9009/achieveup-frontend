@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { Lightbulb, Save, Zap, Target, Brain, CheckCircle, AlertCircle, Clock, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { skillAssignmentAPI, canvasAPI } from '../../services/api';
+import { skillAssignmentAPI, canvasAPI, skillMatrixAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../common/Button';
 import Input from '../common/Input';
@@ -61,19 +61,23 @@ const SkillAssignmentInterface: React.FC = () => {
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [quizzes, setQuizzes] = useState<CanvasQuiz[]>([]);
   const [questions, setQuestions] = useState<CanvasQuestion[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<string>('');
-  const [selectedQuiz, setSelectedQuiz] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
-
   const [questionSkills, setQuestionSkills] = useState<QuestionSkills>({});
   const [suggestions, setSuggestions] = useState<Suggestions>({});
-  const [questionAnalysis, setQuestionAnalysis] = useState<QuestionAnalysis[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [skillFilter, setSkillFilter] = useState<string>('all');
+  const [bulkSkill, setBulkSkill] = useState<string>('');
+  const [autoAnalysisInProgress, setAutoAnalysisInProgress] = useState<boolean>(false);
   const [aiAnalysisStatus, setAiAnalysisStatus] = useState<AIAnalysisStatus>({});
   const [humanReviewStatus, setHumanReviewStatus] = useState<HumanReviewStatus>({});
-  const [searchTerm, setSearchTerm] = useState('');
-  const [skillFilter, setSkillFilter] = useState('all');
-  const [bulkSkill, setBulkSkill] = useState('');
-  const [autoAnalysisInProgress, setAutoAnalysisInProgress] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [selectedCourse, setSelectedCourse] = useState<string>('');
+  const [selectedQuiz, setSelectedQuiz] = useState<string>('');
+  
+  // New state for skill matrix selection
+  const [availableMatrices, setAvailableMatrices] = useState<any[]>([]);
+  const [selectedMatrix, setSelectedMatrix] = useState<string>('');
+  const [selectedMatrixData, setSelectedMatrixData] = useState<any>(null);
+  const [loadingMatrices, setLoadingMatrices] = useState<boolean>(false);
 
   const {
     register,
@@ -249,6 +253,9 @@ const SkillAssignmentInterface: React.FC = () => {
       setQuestions([]);
       setValue('quizId', '');
       
+      // Load available skill matrices for this course
+      loadSkillMatrices(courseId);
+      
     } catch (error) {
       console.error('Error loading quizzes:', error);
       toast.error('Failed to load quizzes. Please try again.');
@@ -263,6 +270,34 @@ const SkillAssignmentInterface: React.FC = () => {
       setLoading(false);
     }
   }, [isInstructor, setValue]);
+
+  const loadSkillMatrices = async (courseId: string) => {
+    try {
+      setLoadingMatrices(true);
+      const response = await skillMatrixAPI.getAllByCourse(courseId);
+      setAvailableMatrices(response.data);
+      
+      // Auto-select first matrix if available
+      if (response.data.length > 0) {
+        setSelectedMatrix(response.data[0]._id);
+        setSelectedMatrixData(response.data[0]);
+      } else {
+        setSelectedMatrix('');
+        setSelectedMatrixData(null);
+      }
+    } catch (error: any) {
+      console.error('Error loading skill matrices:', error);
+      // If 404, no matrices exist yet - that's fine
+      if (error.response?.status !== 404) {
+        console.warn('Failed to load skill matrices:', error.message);
+      }
+      setAvailableMatrices([]);
+      setSelectedMatrix('');
+      setSelectedMatrixData(null);
+    } finally {
+      setLoadingMatrices(false);
+    }
+  };
 
   const loadQuestions = useCallback(async (quizId: string): Promise<void> => {
     try {
@@ -327,7 +362,7 @@ const SkillAssignmentInterface: React.FC = () => {
   const removeSkillFromQuestion = (questionId: string, skillIndex: number): void => {
     setQuestionSkills(prev => ({
       ...prev,
-      [questionId]: prev[questionId].filter((_, index) => index !== skillIndex)
+      [questionId]: prev[question.id].filter((_, index) => index !== skillIndex)
     }));
   };
 
@@ -335,6 +370,16 @@ const SkillAssignmentInterface: React.FC = () => {
     if (!questionSkills[questionId]?.includes(skill)) {
       addSkillToQuestion(questionId, skill);
     }
+  };
+
+  const handleMatrixSelection = (matrixId: string) => {
+    const matrix = availableMatrices.find(m => m._id === matrixId);
+    setSelectedMatrix(matrixId);
+    setSelectedMatrixData(matrix);
+  };
+
+  const getMatrixSkills = (): string[] => {
+    return selectedMatrixData?.skills || [];
   };
 
   const bulkAssignSkill = (skill: string): void => {
@@ -442,7 +487,7 @@ const SkillAssignmentInterface: React.FC = () => {
     }));
   };
 
-
+  const [questionAnalysis, setQuestionAnalysis] = useState<QuestionAnalysis[]>([]);
 
   const stats = getAssignmentStats();
   const filteredQuestions = getFilteredQuestions();
@@ -465,7 +510,7 @@ const SkillAssignmentInterface: React.FC = () => {
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             {/* Course and Quiz Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Course
@@ -483,6 +528,35 @@ const SkillAssignmentInterface: React.FC = () => {
                 </select>
                 {errors.courseId && (
                   <p className="mt-1 text-sm text-red-600">{errors.courseId.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Skill Matrix
+                </label>
+                <select
+                  value={selectedMatrix}
+                  onChange={(e) => handleMatrixSelection(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
+                  disabled={!selectedCourse || loadingMatrices}
+                >
+                  <option value="">
+                    {!selectedCourse ? 'Select a course first' : 
+                     loadingMatrices ? 'Loading matrices...' : 
+                     availableMatrices.length === 0 ? 'No skill matrices found' :
+                     'Select a skill matrix'}
+                  </option>
+                  {availableMatrices.map(matrix => (
+                    <option key={matrix._id} value={matrix._id}>
+                      {matrix.matrix_name} ({matrix.skills.length} skills)
+                    </option>
+                  ))}
+                </select>
+                {selectedCourse && availableMatrices.length === 0 && !loadingMatrices && (
+                  <p className="mt-1 text-sm text-blue-600">
+                    <a href="/skill-matrix" className="hover:underline">Create a skill matrix first</a>
+                  </p>
                 )}
               </div>
 
