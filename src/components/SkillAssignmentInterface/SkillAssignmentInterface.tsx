@@ -131,7 +131,13 @@ const SkillAssignmentInterface: React.FC = () => {
       setSuggestions(newSuggestions);
       setAiAnalysisStatus(completedStatus);
       
-      toast.success(`AI analyzed ${questions.length} questions successfully`);
+      // Debug information for user
+      const totalSuggestions = Object.values(newSuggestions).reduce((acc, skills) => acc + skills.length, 0);
+      if (totalSuggestions === 0) {
+        toast.error(`⚠️ AI analysis completed but returned no skill suggestions. This is a backend issue - the AI service is not providing skill recommendations.`);
+      } else {
+        toast.success(`AI analyzed ${questions.length} questions and provided ${totalSuggestions} skill suggestions`);
+      }
     } catch (error) {
       console.error('Error analyzing questions with AI:', error);
       toast.error('AI analysis failed. Please try manual skill assignment.');
@@ -758,6 +764,24 @@ const SkillAssignmentInterface: React.FC = () => {
                                     )}
                                   </button>
                                 ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* No AI Suggestions Available */}
+                          {analysisStatus === 'completed' && questionSuggestions.length === 0 && (
+                            <div className="mb-4">
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">AI Suggestions</h4>
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                <div className="flex items-center">
+                                  <AlertCircle className="w-4 h-4 text-yellow-600 mr-2" />
+                                  <p className="text-sm text-yellow-800">
+                                    <strong>No AI suggestions available.</strong> The AI analysis completed but didn't return any skill recommendations for this question. This appears to be a backend issue.
+                                  </p>
+                                </div>
+                                <p className="text-xs text-yellow-700 mt-2">
+                                  You can still assign skills manually using the input field below.
+                                </p>
                               </div>
                             </div>
                           )}

@@ -59,4 +59,7 @@ BACKEND_MOCK_DATA_REQUIREMENTS.txt
 BACKEND_SKILLS_DATA_MISSING.txt
 
 # Backend quiz API issue report (internal communication)
-BACKEND_QUIZ_API_ISSUE.txt 
+BACKEND_QUIZ_API_ISSUE.txt
+
+# Backend AI suggestions issue report (internal communication) 
+BACKEND_AI_SUGGESTIONS_ISSUE.txt 
