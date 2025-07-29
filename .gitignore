@@ -66,3 +66,6 @@ BACKEND_AI_SUGGESTIONS_ISSUE.txt
 
 # Backend AI analysis 400 error debug report (internal communication)
 BACKEND_AI_ANALYSIS_400_DEBUG.txt 
+
+# Backend matrix API missing endpoint issue (internal communication)
+BACKEND_MATRIX_API_MISSING.txt 

@@ -414,8 +414,14 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
             <p><strong>Matrix name already exists!</strong></p>
             <p className="text-sm mt-1">A skill matrix with the name "{data.matrixName}" already exists for this course.</p>
             <p className="text-sm mt-1">Suggestion: Try "{suggestedName}" or choose a different name.</p>
+            {existingMatrices.length === 0 && (
+              <p className="text-xs text-gray-600 mt-2 bg-yellow-50 p-2 rounded">
+                ⚠️ <strong>Backend Issue:</strong> The frontend cannot see existing matrices because 
+                GET /achieveup/matrix/course/{selectedCourse} returns 404. The backend team needs to implement this endpoint.
+              </p>
+            )}
           </div>,
-          { duration: 6000 }
+          { duration: 8000 }
         );
         
         console.error('409 Conflict details:', {
@@ -433,7 +439,14 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
             'A skill matrix with this name already exists for this course',
             'Duplicate course_id + matrix_name combination',
             'Backend validation rules preventing duplicate entries'
-          ]
+          ],
+          debugInfo: {
+            frontendKnowsAbout: existingNames.length,
+            frontendMatrices: existingNames,
+            backendRejectsName: data.matrixName,
+            courseId: selectedCourse,
+            missingEndpoint: existingNames.length === 0 ? 'GET /achieveup/matrix/course/{courseId} likely returns 404' : 'Endpoint working'
+          }
         });
         
         // Update the form with suggested name
