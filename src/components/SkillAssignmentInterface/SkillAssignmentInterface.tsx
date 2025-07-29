@@ -180,10 +180,7 @@ const SkillAssignmentInterface: React.FC = () => {
       
     } catch (error) {
       console.error('Error loading quizzes:', error);
-      const errorMessage = (error as any)?.response?.status === 401 
-        ? 'Authentication failed. Please check your Canvas instructor token in Settings.'
-        : 'Failed to load quizzes. Please try again or contact support.';
-      toast.error(errorMessage);
+      toast.error('Failed to load quizzes. Please try again.');
       
       // Set empty arrays so UI doesn't break
       setQuizzes([]);
@@ -238,22 +235,14 @@ const SkillAssignmentInterface: React.FC = () => {
   }, [loadCourses]);
 
   useEffect(() => {
-    try {
-      if (watchedCourse) {
-        loadQuizzes(watchedCourse);
-      }
-    } catch (error) {
-      console.error('Error in watchedCourse useEffect:', error);
+    if (watchedCourse) {
+      loadQuizzes(watchedCourse);
     }
   }, [watchedCourse, loadQuizzes]);
 
   useEffect(() => {
-    try {
-      if (watchedQuiz) {
-        loadQuestions(watchedQuiz);
-      }
-    } catch (error) {
-      console.error('Error in watchedQuiz useEffect:', error);
+    if (watchedQuiz) {
+      loadQuestions(watchedQuiz);
     }
   }, [watchedQuiz, loadQuestions]);
 
@@ -382,31 +371,20 @@ const SkillAssignmentInterface: React.FC = () => {
   };
 
   const getFilteredQuestions = () => {
-    try {
-      if (!Array.isArray(questions)) {
-        console.warn('questions is not an array:', questions);
-        return [];
-      }
-      
-      return questions.filter(question => {
-        if (!question || typeof question.question_text !== 'string' || typeof question.id !== 'string') {
-          console.warn('Invalid question object:', question);
-          return false;
-        }
-        
-        const matchesSearch = question.question_text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             question.id.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesSkillFilter = skillFilter === 'all' || 
-                                   (skillFilter === 'assigned' && questionSkills[question.id]?.length > 0) ||
-                                   (skillFilter === 'unassigned' && (!questionSkills[question.id] || questionSkills[question.id].length === 0));
-        
-        return matchesSearch && matchesSkillFilter;
-      });
-    } catch (error) {
-      console.error('Error in getFilteredQuestions:', error);
+    if (!Array.isArray(questions)) {
       return [];
     }
+    
+    return questions.filter(question => {
+      const matchesSearch = question.question_text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           question.id.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesSkillFilter = skillFilter === 'all' || 
+                                 (skillFilter === 'assigned' && questionSkills[question.id]?.length > 0) ||
+                                 (skillFilter === 'unassigned' && (!questionSkills[question.id] || questionSkills[question.id].length === 0));
+      
+      return matchesSearch && matchesSkillFilter;
+    });
   };
 
   const getAssignmentStats = () => {
@@ -467,15 +445,13 @@ const SkillAssignmentInterface: React.FC = () => {
     );
   }
 
-  // Add error boundary protection
-  try {
-    return (
-      <div className="max-w-7xl mx-auto p-6">
-        <Card
-          title="Skill Assignment Interface"
-          subtitle="Assign skills to quiz questions using AI-powered analysis and zero-shot classification"
-        >
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+  return (
+    <div className="max-w-7xl mx-auto p-6">
+      <Card
+        title="Skill Assignment Interface"
+        subtitle="Assign skills to quiz questions using AI-powered analysis and zero-shot classification"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             {/* Course and Quiz Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -505,10 +481,12 @@ const SkillAssignmentInterface: React.FC = () => {
                 <select
                   {...register('quizId', { required: 'Please select a quiz' })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
-                  disabled={!selectedCourse}
+                  disabled={!selectedCourse || loading}
                 >
                   <option value="">
-                    {selectedCourse ? 'Select a quiz' : 'Select a course first'}
+                    {!selectedCourse ? 'Select a course first' : 
+                     loading ? 'Loading quizzes...' : 
+                     'Select a quiz'}
                   </option>
                   {Array.isArray(quizzes) && quizzes.map(quiz => (
                     <option key={quiz.id} value={quiz.id}>
@@ -545,25 +523,12 @@ const SkillAssignmentInterface: React.FC = () => {
                 <p className="text-gray-600">
                   Choose a quiz from the dropdown above to view its questions and assign skills.
                 </p>
-                {quizzes.length === 0 && selectedCourse && (
-                  <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-md mx-auto">
-                    <h4 className="text-sm font-medium text-yellow-800 mb-2">No Quizzes Available</h4>
-                    <p className="text-sm text-yellow-700 mb-3">
-                      This could be due to:
+                {quizzes.length === 0 && selectedCourse && !loading && (
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-auto">
+                    <h4 className="text-sm font-medium text-blue-800 mb-2">No Quizzes Found</h4>
+                    <p className="text-sm text-blue-700">
+                      This course doesn't have any quizzes yet. Create quizzes in Canvas to start assigning skills to questions.
                     </p>
-                    <ul className="text-sm text-yellow-700 text-left space-y-1">
-                      <li>• No quizzes created in this Canvas course yet</li>
-                      <li>• Canvas authentication issues</li>
-                      <li>• Backend API connectivity problems</li>
-                    </ul>
-                    <div className="mt-4">
-                      <a
-                        href="/settings"
-                        className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-yellow-800 bg-yellow-100 hover:bg-yellow-200"
-                      >
-                        Check Canvas Settings
-                      </a>
-                    </div>
                   </div>
                 )}
               </div>
@@ -914,24 +879,6 @@ const SkillAssignmentInterface: React.FC = () => {
         </Card>
       </div>
     );
-  } catch (error) {
-    console.error('Error rendering SkillAssignmentInterface:', error);
-    return (
-      <div className="max-w-7xl mx-auto p-6">
-        <Card
-          title="Error"
-          subtitle="An unexpected error occurred while loading the skill assignment interface."
-        >
-          <p className="text-red-600">
-            {error instanceof Error ? error.message : 'Unknown error'}
-          </p>
-          <p className="text-gray-600">
-            Please try refreshing the page or contact support if the issue persists.
-          </p>
-        </Card>
-      </div>
-    );
-  }
 };
 
 export default SkillAssignmentInterface; 
