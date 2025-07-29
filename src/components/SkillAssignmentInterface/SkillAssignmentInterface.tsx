@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Lightbulb, Save, Download, Upload, Search, Zap, Target, Settings, Brain, CheckCircle, AlertCircle, Clock, BookOpen, Users } from 'lucide-react';
+import { Lightbulb, Save, Download, Upload, Zap, Target, Brain, CheckCircle, AlertCircle, Clock, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { skillAssignmentAPI, canvasAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -70,7 +70,6 @@ const SkillAssignmentInterface: React.FC = () => {
   const [questionAnalysis, setQuestionAnalysis] = useState<QuestionAnalysis[]>([]);
   const [aiAnalysisStatus, setAiAnalysisStatus] = useState<AIAnalysisStatus>({});
   const [humanReviewStatus, setHumanReviewStatus] = useState<HumanReviewStatus>({});
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [skillFilter, setSkillFilter] = useState('all');
   const [bulkSkill, setBulkSkill] = useState('');
@@ -88,6 +87,65 @@ const SkillAssignmentInterface: React.FC = () => {
   const watchedQuiz = watch('quizId');
 
   const isInstructor = user?.canvasTokenType === 'instructor';
+
+  // Backend AI analysis for all questions
+  const analyzeQuestionsWithAI = useCallback(async (questions: CanvasQuestion[]) => {
+    if (!isInstructor) {
+      toast.error('Instructor access required for AI analysis');
+      return;
+    }
+
+    setAutoAnalysisInProgress(true);
+    
+    try {
+      // Set all questions to analyzing status
+      const initialStatus: AIAnalysisStatus = {};
+      questions.forEach(q => {
+        initialStatus[q.id] = 'analyzing';
+      });
+      setAiAnalysisStatus(initialStatus);
+
+      // Call backend for AI analysis
+      const response = await skillAssignmentAPI.analyzeQuestions({
+        courseId: selectedCourse,
+        quizId: selectedQuiz,
+        questions: questions.map(q => ({ 
+          id: q.id, 
+          text: q.question_text,
+          type: q.question_type,
+          points: q.points
+        }))
+      });
+      
+      setQuestionAnalysis(response.data);
+      
+      // Update suggestions and status based on AI analysis
+      const newSuggestions: Suggestions = {};
+      const completedStatus: AIAnalysisStatus = {};
+      
+      response.data.forEach(analysis => {
+        newSuggestions[analysis.questionId] = analysis.suggestedSkills;
+        completedStatus[analysis.questionId] = 'completed';
+      });
+      
+      setSuggestions(newSuggestions);
+      setAiAnalysisStatus(completedStatus);
+      
+      toast.success(`AI analyzed ${questions.length} questions successfully`);
+    } catch (error) {
+      console.error('Error analyzing questions with AI:', error);
+      toast.error('AI analysis failed. Please try manual skill assignment.');
+      
+      // Set error status for all questions
+      const errorStatus: AIAnalysisStatus = {};
+      questions.forEach(q => {
+        errorStatus[q.id] = 'error';
+      });
+      setAiAnalysisStatus(errorStatus);
+    } finally {
+      setAutoAnalysisInProgress(false);
+    }
+  }, [isInstructor, selectedCourse, selectedQuiz]);
 
   const loadCourses = useCallback(async (): Promise<void> => {
     try {
@@ -160,7 +218,7 @@ const SkillAssignmentInterface: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [isInstructor]);
+  }, [isInstructor, analyzeQuestionsWithAI]);
 
   useEffect(() => {
     loadCourses();
@@ -177,65 +235,6 @@ const SkillAssignmentInterface: React.FC = () => {
       loadQuestions(watchedQuiz);
     }
   }, [watchedQuiz, loadQuestions]);
-
-  // Backend AI analysis for all questions
-  const analyzeQuestionsWithAI = useCallback(async (questions: CanvasQuestion[]) => {
-    if (!isInstructor) {
-      toast.error('Instructor access required for AI analysis');
-      return;
-    }
-
-    setAutoAnalysisInProgress(true);
-    
-    try {
-      // Set all questions to analyzing status
-      const initialStatus: AIAnalysisStatus = {};
-      questions.forEach(q => {
-        initialStatus[q.id] = 'analyzing';
-      });
-      setAiAnalysisStatus(initialStatus);
-
-      // Call backend for AI analysis
-      const response = await skillAssignmentAPI.analyzeQuestions({
-        courseId: selectedCourse,
-        quizId: selectedQuiz,
-        questions: questions.map(q => ({ 
-          id: q.id, 
-          text: q.question_text,
-          type: q.question_type,
-          points: q.points
-        }))
-      });
-      
-      setQuestionAnalysis(response.data);
-      
-      // Update suggestions and status based on AI analysis
-      const newSuggestions: Suggestions = {};
-      const completedStatus: AIAnalysisStatus = {};
-      
-      response.data.forEach(analysis => {
-        newSuggestions[analysis.questionId] = analysis.suggestedSkills;
-        completedStatus[analysis.questionId] = 'completed';
-      });
-      
-      setSuggestions(newSuggestions);
-      setAiAnalysisStatus(completedStatus);
-      
-      toast.success(`AI analyzed ${questions.length} questions successfully`);
-    } catch (error) {
-      console.error('Error analyzing questions with AI:', error);
-      toast.error('AI analysis failed. Please try manual skill assignment.');
-      
-      // Set error status for all questions
-      const errorStatus: AIAnalysisStatus = {};
-      questions.forEach(q => {
-        errorStatus[q.id] = 'error';
-      });
-      setAiAnalysisStatus(errorStatus);
-    } finally {
-      setAutoAnalysisInProgress(false);
-    }
-  }, [isInstructor, selectedCourse, selectedQuiz]);
 
   // Bulk AI skill assignment
   const bulkAssignSkillsWithAI = async () => {
@@ -425,7 +424,6 @@ const SkillAssignmentInterface: React.FC = () => {
 
   const stats = getAssignmentStats();
   const filteredQuestions = getFilteredQuestions();
-  const reviewStatus = getReviewStatus();
 
   if (loading && courses.length === 0) {
     return (
