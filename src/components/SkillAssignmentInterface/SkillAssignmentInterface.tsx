@@ -163,19 +163,12 @@ const SkillAssignmentInterface: React.FC = () => {
   }, [isInstructor]);
 
   const loadQuizzes = useCallback(async (courseId: string): Promise<void> => {
-    console.log('loadQuizzes called with courseId:', courseId);
-    console.log('isInstructor:', isInstructor);
-    
     try {
       setLoading(true);
-      console.log('About to call Canvas API for quizzes...');
       
       const response = isInstructor 
         ? await canvasAPI.getInstructorQuizzes(courseId)
         : await canvasAPI.getQuizzes(courseId);
-      
-      console.log('Canvas API response for quizzes:', response);
-      console.log('Quizzes data:', response.data);
       
       setQuizzes(response.data);
       setSelectedCourse(courseId);
@@ -185,19 +178,21 @@ const SkillAssignmentInterface: React.FC = () => {
       setQuestions([]);
       setValue('quizId', '');
       
-      console.log('Successfully set quizzes:', response.data);
     } catch (error) {
       console.error('Error loading quizzes:', error);
-      console.error('Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace',
-        response: (error as any)?.response?.data,
-        status: (error as any)?.response?.status
-      });
-      toast.error('Failed to load quizzes. Please try again.');
+      const errorMessage = (error as any)?.response?.status === 401 
+        ? 'Authentication failed. Please check your Canvas instructor token in Settings.'
+        : 'Failed to load quizzes. Please try again or contact support.';
+      toast.error(errorMessage);
+      
+      // Set empty arrays so UI doesn't break
+      setQuizzes([]);
+      setSelectedCourse(courseId);
+      setSelectedQuiz('');
+      setQuestions([]);
+      setValue('quizId', '');
     } finally {
       setLoading(false);
-      console.log('loadQuizzes finished');
     }
   }, [isInstructor, setValue]);
 
@@ -243,10 +238,8 @@ const SkillAssignmentInterface: React.FC = () => {
   }, [loadCourses]);
 
   useEffect(() => {
-    console.log('useEffect for watchedCourse triggered:', watchedCourse);
     try {
       if (watchedCourse) {
-        console.log('Calling loadQuizzes with:', watchedCourse);
         loadQuizzes(watchedCourse);
       }
     } catch (error) {
@@ -255,10 +248,8 @@ const SkillAssignmentInterface: React.FC = () => {
   }, [watchedCourse, loadQuizzes]);
 
   useEffect(() => {
-    console.log('useEffect for watchedQuiz triggered:', watchedQuiz);
     try {
       if (watchedQuiz) {
-        console.log('Calling loadQuestions with:', watchedQuiz);
         loadQuestions(watchedQuiz);
       }
     } catch (error) {
@@ -554,10 +545,26 @@ const SkillAssignmentInterface: React.FC = () => {
                 <p className="text-gray-600">
                   Choose a quiz from the dropdown above to view its questions and assign skills.
                 </p>
-                {quizzes.length === 0 && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    No quizzes found for this course. Make sure you have quizzes created in Canvas.
-                  </p>
+                {quizzes.length === 0 && selectedCourse && (
+                  <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-md mx-auto">
+                    <h4 className="text-sm font-medium text-yellow-800 mb-2">No Quizzes Available</h4>
+                    <p className="text-sm text-yellow-700 mb-3">
+                      This could be due to:
+                    </p>
+                    <ul className="text-sm text-yellow-700 text-left space-y-1">
+                      <li>• No quizzes created in this Canvas course yet</li>
+                      <li>• Canvas authentication issues</li>
+                      <li>• Backend API connectivity problems</li>
+                    </ul>
+                    <div className="mt-4">
+                      <a
+                        href="/settings"
+                        className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-yellow-800 bg-yellow-100 hover:bg-yellow-200"
+                      >
+                        Check Canvas Settings
+                      </a>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
