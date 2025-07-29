@@ -69,8 +69,13 @@ export const skillMatrixAPI = {
     api.post('/achieveup/matrix/create', data),
   get: (courseId: string): Promise<AxiosResponse<SkillMatrix>> => 
     api.get(`/achieveup/matrix/${courseId}`),
+  // Get all skill matrices for a course (supports multiple matrices per course)
+  getAllByCourse: (courseId: string): Promise<AxiosResponse<SkillMatrix[]>> => 
+    api.get(`/achieveup/matrix/course/${courseId}`),
   update: (matrixId: string, data: UpdateSkillMatrixRequest): Promise<AxiosResponse<SkillMatrix>> => 
     api.put(`/achieveup/matrix/${matrixId}`, data),
+  delete: (matrixId: string): Promise<AxiosResponse<void>> => 
+    api.delete(`/achieveup/matrix/${matrixId}`),
   getSkillSuggestions: (data: { courseId: string; courseName: string; courseCode: string; courseDescription?: string }): Promise<AxiosResponse<any[]>> => 
     api.post('/achieveup/ai/suggest-skills', data),
 };

@@ -41,6 +41,11 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   const [step, setStep] = useState<'select-course' | 'get-suggestions' | 'review-skills'>('select-course');
   const [editingSkill, setEditingSkill] = useState<number | null>(null);
   const [newSkill, setNewSkill] = useState('');
+  
+  // New state for handling existing matrices
+  const [existingMatrices, setExistingMatrices] = useState<SkillMatrix[]>([]);
+  const [showExistingMatrices, setShowExistingMatrices] = useState(false);
+  const [loadingExistingMatrices, setLoadingExistingMatrices] = useState(false);
 
   const isInstructor = user?.canvasTokenType === 'instructor';
 
@@ -78,6 +83,31 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
     if (course) {
       setValue('matrixName', `${course.name} - Skills Matrix`);
       setStep('get-suggestions');
+      // Load existing matrices for this course
+      loadExistingMatrices(courseId);
+    }
+  };
+
+  const loadExistingMatrices = async (courseId: string) => {
+    try {
+      setLoadingExistingMatrices(true);
+      const response = await skillMatrixAPI.getAllByCourse(courseId);
+      setExistingMatrices(response.data);
+      
+      // Show existing matrices section if any exist
+      if (response.data.length > 0) {
+        setShowExistingMatrices(true);
+      }
+    } catch (error: any) {
+      console.error('Error loading existing matrices:', error);
+      // If 404, no matrices exist yet - that's fine
+      if (error.response?.status !== 404) {
+        console.warn('Failed to load existing matrices:', error.message);
+      }
+      setExistingMatrices([]);
+      setShowExistingMatrices(false);
+    } finally {
+      setLoadingExistingMatrices(false);
     }
   };
 
@@ -293,17 +323,42 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       
       onMatrixCreated?.(response.data);
       toast.success('Skill matrix created successfully!');
+      
+      // Refresh existing matrices list
+      loadExistingMatrices(selectedCourse);
+      
+      // Reset form for creating another matrix
+      setStep('get-suggestions');
+      setFinalSkills([]);
+      setSkillSuggestions([]);
+      if (selectedCourseData) {
+        setValue('matrixName', `${selectedCourseData.name} - Skills Matrix ${existingMatrices.length + 2}`);
+      }
+      setValue('description', '');
     } catch (error: any) {
       console.error('Error creating skill matrix:', error);
       
       // Detailed error handling based on status code
       if (error.response?.status === 409) {
-        const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Conflict - item already exists';
-        toast.error(`Skill matrix creation failed (409): ${errorMsg}. This usually means a matrix with this name already exists for this course.`);
+        // Suggest a unique name
+        const suggestedName = `${data.matrixName} (${new Date().toLocaleDateString()})`;
+        const existingNames = existingMatrices.map(m => m.matrix_name);
+        
+        toast.error(
+          <div>
+            <p><strong>Matrix name already exists!</strong></p>
+            <p className="text-sm mt-1">A skill matrix with the name "{data.matrixName}" already exists for this course.</p>
+            <p className="text-sm mt-1">Suggestion: Try "{suggestedName}" or choose a different name.</p>
+          </div>,
+          { duration: 6000 }
+        );
+        
         console.error('409 Conflict details:', {
           status: error.response.status,
           statusText: error.response.statusText,
           data: error.response.data,
+          existingMatrices: existingNames,
+          suggestedName,
           config: {
             url: error.response.config?.url,
             method: error.response.config?.method,
@@ -315,6 +370,10 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
             'Backend validation rules preventing duplicate entries'
           ]
         });
+        
+        // Update the form with suggested name
+        setValue('matrixName', suggestedName);
+        
       } else if (error.response?.status === 400) {
         const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Bad request format';
         toast.error(`Skill matrix creation failed (400): ${errorMsg}. Check console for request details.`);
@@ -362,35 +421,12 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
           {/* Step 1: Course Selection */}
           {step === 'select-course' && (
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
-                Step 1: Select Course
-              </h3>
-              
-              {courses.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {courses.map(course => (
-                    <div
-                      key={course.id}
-                      onClick={() => handleCourseSelect(course.id)}
-                      className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all duration-200 group"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-medium text-gray-900">{course.name}</h4>
-                          <p className="text-sm text-gray-600">{course.code}</p>
-                          {course.description && (
-                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{course.description}</p>
-                          )}
-                        </div>
-                        <CheckCircle className="w-5 h-5 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Select Course</h3>
+              {courses.length === 0 ? (
                 <div className="text-center py-8">
-                  <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="w-8 h-8 text-gray-400" />
+                  </div>
                   <h4 className="text-lg font-medium text-gray-900 mb-2">No Courses Found</h4>
                   <p className="text-gray-600 mb-4">
                     Make sure your Canvas instructor token is set up correctly.
@@ -402,7 +438,102 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                     Configure Canvas Token
                   </a>
                 </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {courses.map(course => (
+                    <div
+                      key={course.id}
+                      onClick={() => handleCourseSelect(course.id)}
+                      className="border border-gray-200 rounded-lg p-4 hover:border-ucf-gold hover:bg-ucf-gold hover:bg-opacity-5 cursor-pointer transition-colors"
+                    >
+                      <h4 className="font-medium text-gray-900">{course.name}</h4>
+                      <p className="text-sm text-gray-600">{course.code}</p>
+                      {course.description && (
+                        <p className="text-sm text-gray-500 mt-1">{course.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
+            </div>
+          )}
+
+          {/* Existing Matrices Section */}
+          {showExistingMatrices && selectedCourseData && (
+            <div className="mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-medium text-blue-900">
+                  Existing Skill Matrices for {selectedCourseData.name}
+                </h4>
+                <button
+                  onClick={() => setShowExistingMatrices(!showExistingMatrices)}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  {showExistingMatrices ? 'Hide' : 'Show'} ({existingMatrices.length})
+                </button>
+              </div>
+              
+              {loadingExistingMatrices ? (
+                <div className="flex justify-center items-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
+              ) : existingMatrices.length > 0 ? (
+                <div className="space-y-3">
+                  {existingMatrices.map((matrix, index) => (
+                    <div key={matrix._id} className="bg-white rounded-lg p-4 border border-blue-200">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900">{matrix.matrix_name}</h5>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {matrix.skills.length} skills • Created {new Date(matrix.created_at).toLocaleDateString()}
+                          </p>
+                          <div className="mt-2">
+                            <p className="text-xs text-gray-500 mb-1">Skills:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {matrix.skills.slice(0, 5).map((skill, skillIndex) => (
+                                <span
+                                  key={skillIndex}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                              {matrix.skills.length > 5 && (
+                                <span className="text-xs text-gray-500">
+                                  +{matrix.skills.length - 5} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="ml-4 flex items-center space-x-2">
+                          <button
+                            onClick={() => {
+                              // Load this matrix's skills for editing/viewing
+                              setFinalSkills([...matrix.skills]);
+                              setValue('matrixName', `${matrix.matrix_name} (Copy)`);
+                              setStep('review-skills');
+                              toast.success('Matrix skills loaded for reference. You can modify and create a new matrix.');
+                            }}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            Use as Template
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-blue-700 text-sm">No existing matrices found for this course.</p>
+              )}
+              
+              <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Multiple matrices per course:</strong> You can create multiple skill matrices for the same course 
+                  with different focuses (e.g., "Midterm Skills", "Final Project Skills", "Lab Skills").
+                </p>
+              </div>
             </div>
           )}
 
