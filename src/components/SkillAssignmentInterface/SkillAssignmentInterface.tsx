@@ -252,36 +252,6 @@ const SkillAssignmentInterface: React.FC = () => {
     }
   }, [watchedQuiz, loadQuestions]);
 
-  // Bulk AI skill assignment
-  const bulkAssignSkillsWithAI = async () => {
-    if (!selectedCourse || !selectedQuiz) {
-      toast.error('Please select a course and quiz first');
-      return;
-    }
-
-    if (!isInstructor) {
-      toast.error('Instructor access required for AI bulk assignment');
-      return;
-    }
-
-    setLoading(true);
-    
-    try {
-      const response = await skillAssignmentAPI.bulkAssignWithAI({
-        courseId: selectedCourse,
-        quizId: selectedQuiz
-      });
-      
-      setQuestionSkills(response.data);
-      toast.success('Skills assigned to all questions using AI');
-    } catch (error) {
-      console.error('Error with AI bulk assignment:', error);
-      toast.error('AI bulk assignment failed. Please assign skills manually.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const addSkillToQuestion = (questionId: string, skill: string): void => {
     setQuestionSkills(prev => ({
       ...prev,
@@ -320,22 +290,31 @@ const SkillAssignmentInterface: React.FC = () => {
   };
 
   const bulkAssignFromSuggestions = (): void => {
-    const filteredQuestions = getFilteredQuestions();
     const updatedSkills = { ...questionSkills };
     let assignedCount = 0;
+    let questionsWithSuggestions = 0;
     
-    filteredQuestions.forEach(question => {
+    // Process all questions (not just filtered ones) that have suggestions
+    questions.forEach(question => {
       const questionSuggestions = suggestions[question.id] || [];
-      questionSuggestions.forEach(skill => {
-        if (!updatedSkills[question.id]?.includes(skill)) {
-          updatedSkills[question.id] = [...(updatedSkills[question.id] || []), skill];
-          assignedCount++;
-        }
-      });
+      if (questionSuggestions.length > 0) {
+        questionsWithSuggestions++;
+        questionSuggestions.forEach(skill => {
+          if (!updatedSkills[question.id]?.includes(skill)) {
+            updatedSkills[question.id] = [...(updatedSkills[question.id] || []), skill];
+            assignedCount++;
+          }
+        });
+      }
     });
     
     setQuestionSkills(updatedSkills);
-    toast.success(`Assigned ${assignedCount} skills from AI suggestions`);
+    
+    if (assignedCount > 0) {
+      toast.success(`Assigned ${assignedCount} skills from AI suggestions to ${questionsWithSuggestions} questions`);
+    } else {
+      toast.error('No new skills to assign - all AI suggestions are already assigned');
+    }
   };
 
   const getFilteredQuestions = () => {
@@ -582,9 +561,9 @@ const SkillAssignmentInterface: React.FC = () => {
                         </Button>
                         <Button
                           type="button"
-                          onClick={bulkAssignSkillsWithAI}
+                          onClick={bulkAssignFromSuggestions}
                           variant="secondary"
-                          disabled={questions.length === 0}
+                          disabled={Object.values(suggestions).every(arr => arr.length === 0)}
                           className="flex items-center"
                         >
                           <Target className="w-4 h-4 mr-2" />
