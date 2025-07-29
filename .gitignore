@@ -56,4 +56,7 @@ COMPREHENSIVE_TEST_REPORT.md
 BACKEND_MOCK_DATA_REQUIREMENTS.txt
 
 # Backend skills data issue report (internal communication)
-BACKEND_SKILLS_DATA_MISSING.txt 
+BACKEND_SKILLS_DATA_MISSING.txt
+
+# Backend quiz API issue report (internal communication)
+BACKEND_QUIZ_API_ISSUE.txt 
