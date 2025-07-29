@@ -100,28 +100,41 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       courseDescription: selectedCourseData.description || 'No description available'
     });
 
+    // Debug: Log the complete course data structure
+    console.log('Complete course data structure:', selectedCourseData);
+
     setSuggestionsLoading(true);
     try {
+      // Handle potential missing or differently named courseCode field
+      const courseCode = selectedCourseData.code || (selectedCourseData as any).course_code || (selectedCourseData as any).courseCode || 'UNKNOWN';
+      
       // Prepare and validate request data
       const requestData = {
         courseId: selectedCourse,
         courseName: selectedCourseData.name,
-        courseCode: selectedCourseData.code,
+        courseCode: courseCode,
         courseDescription: selectedCourseData.description
       };
 
       // Log the exact request being sent
       console.log('Sending skill suggestions request:', requestData);
 
-      // Validate request data structure
+      // Validate request data structure with enhanced error messages
       if (!requestData.courseId) {
         throw new Error('Missing courseId in request');
       }
       if (!requestData.courseName) {
         throw new Error('Missing courseName in request');
       }
-      if (!requestData.courseCode) {
-        throw new Error('Missing courseCode in request');
+      if (!requestData.courseCode || requestData.courseCode === 'UNKNOWN') {
+        console.warn('Course code missing or not found in course data:', {
+          originalCourse: selectedCourseData,
+          availableFields: Object.keys(selectedCourseData),
+          codeField: selectedCourseData.code,
+          course_codeField: (selectedCourseData as any).course_code,
+          courseCodeField: (selectedCourseData as any).courseCode
+        });
+        throw new Error(`Missing courseCode in request. Available course fields: ${Object.keys(selectedCourseData).join(', ')}`);
       }
 
       // Call backend for AI skill suggestions
