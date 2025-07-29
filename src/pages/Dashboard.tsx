@@ -70,6 +70,68 @@ const Dashboard: React.FC = () => {
 
   const isInstructor = user?.canvasTokenType === 'instructor';
 
+  // Generate realistic mock activity for demonstration
+  const generateMockActivity = useCallback((coursesLength: number, matricesCount: number): Activity[] => {
+    const now = new Date();
+    
+    // Create contextual activities based on current state
+    const activities: Activity[] = [];
+    
+    if (coursesLength === 0) {
+      activities.push({
+        type: 'matrix',
+        title: 'Set up Canvas Integration',
+        description: 'Connect your Canvas account to load courses and get started with AchieveUp',
+        time: new Date(now.getTime() - 2 * 60000).toISOString(),
+        status: 'pending'
+      });
+    } else if (matricesCount === 0) {
+      activities.push({
+        type: 'matrix',
+        title: 'Create Your First Skill Matrix',
+        description: `You have ${coursesLength} course${coursesLength > 1 ? 's' : ''} loaded. Create a skill matrix to get started`,
+        time: new Date(now.getTime() - 5 * 60000).toISOString(),
+        status: 'pending'
+      });
+    } else {
+      activities.push({
+        type: 'matrix',
+        title: 'Skill Matrix Created',
+        description: `Successfully created ${matricesCount} skill matri${matricesCount > 1 ? 'ces' : 'x'}`,
+        time: new Date(now.getTime() - 30 * 60000).toISOString(),
+        status: 'completed'
+      });
+    }
+    
+    if (matricesCount > 0) {
+      activities.push({
+        type: 'assignment',
+        title: 'Ready for Skill Assignment',
+        description: 'Use AI to automatically map your quiz questions to the skills you\'ve defined',
+        time: new Date(now.getTime() - 10 * 60000).toISOString(),
+        status: 'pending'
+      });
+    } else {
+      activities.push({
+        type: 'assignment',
+        title: 'AI-Powered Skill Assignment',
+        description: 'Once you create a skill matrix, you can automatically map quiz questions to skills',
+        time: new Date(now.getTime() - 10 * 60000).toISOString(),
+        status: 'pending'
+      });
+    }
+    
+    activities.push({
+      type: 'progress',
+      title: 'Student Progress Tracking',
+      description: 'Track student skill development as they complete Canvas assessments',
+      time: new Date(now.getTime() - 15 * 60000).toISOString(),
+      status: 'pending'
+    });
+    
+    return activities;
+  }, []);
+
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -104,7 +166,7 @@ const Dashboard: React.FC = () => {
               totalCourses: coursesResponse.data.length,
               totalStudents: dashboardResponse.data.totalStudents || 0,
               averageProgress: dashboardResponse.data.averageProgress || 0,
-              recentActivity: dashboardResponse.data.recentActivity || generateMockActivity()
+              recentActivity: dashboardResponse.data.recentActivity || generateMockActivity(coursesResponse.data.length, totalMatrices)
             });
           } catch (error) {
             // Use realistic mock data when backend isn't available
@@ -113,7 +175,7 @@ const Dashboard: React.FC = () => {
               totalCourses: coursesResponse.data.length,
               totalStudents: mockStudentCount,
               averageProgress: 0,
-              recentActivity: generateMockActivity()
+              recentActivity: generateMockActivity(coursesResponse.data.length, totalMatrices)
             });
           }
         } catch (error) {
@@ -125,7 +187,7 @@ const Dashboard: React.FC = () => {
             totalCourses: 0,
             totalStudents: 0,
             averageProgress: 0,
-            recentActivity: generateMockActivity()
+            recentActivity: generateMockActivity(0, 0)
           });
         }
       } else {
@@ -149,7 +211,7 @@ const Dashboard: React.FC = () => {
           totalCourses: 0,
           totalStudents: 0,
           averageProgress: 0,
-          recentActivity: generateMockActivity()
+          recentActivity: generateMockActivity(0, 0)
         });
       } else {
         setStats({
@@ -162,69 +224,7 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [isInstructor, courses.length, skillMatricesCount]); // Added dependencies for generateMockActivity
-
-  // Generate realistic mock activity for demonstration
-  const generateMockActivity = (): Activity[] => {
-    const now = new Date();
-    
-    // Create contextual activities based on current state
-    const activities: Activity[] = [];
-    
-    if (courses.length === 0) {
-      activities.push({
-        type: 'matrix',
-        title: 'Set up Canvas Integration',
-        description: 'Connect your Canvas account to load courses and get started with AchieveUp',
-        time: new Date(now.getTime() - 2 * 60000).toISOString(),
-        status: 'pending'
-      });
-    } else if (skillMatricesCount === 0) {
-      activities.push({
-        type: 'matrix',
-        title: 'Create Your First Skill Matrix',
-        description: `You have ${courses.length} course${courses.length > 1 ? 's' : ''} loaded. Create a skill matrix to get started`,
-        time: new Date(now.getTime() - 5 * 60000).toISOString(),
-        status: 'pending'
-      });
-    } else {
-      activities.push({
-        type: 'matrix',
-        title: 'Skill Matrix Created',
-        description: `Successfully created ${skillMatricesCount} skill matri${skillMatricesCount > 1 ? 'ces' : 'x'}`,
-        time: new Date(now.getTime() - 30 * 60000).toISOString(),
-        status: 'completed'
-      });
-    }
-    
-    if (skillMatricesCount > 0) {
-      activities.push({
-        type: 'assignment',
-        title: 'Ready for Skill Assignment',
-        description: 'Use AI to automatically map your quiz questions to the skills you\'ve defined',
-        time: new Date(now.getTime() - 10 * 60000).toISOString(),
-        status: 'pending'
-      });
-    } else {
-      activities.push({
-        type: 'assignment',
-        title: 'AI-Powered Skill Assignment',
-        description: 'Once you create a skill matrix, you can automatically map quiz questions to skills',
-        time: new Date(now.getTime() - 10 * 60000).toISOString(),
-        status: 'pending'
-      });
-    }
-    
-    activities.push({
-      type: 'progress',
-      title: 'Student Progress Tracking',
-      description: 'Track student skill development as they complete Canvas assessments',
-      time: new Date(now.getTime() - 15 * 60000).toISOString(),
-      status: 'pending'
-    });
-    
-    return activities;
-  };
+  }, [isInstructor, generateMockActivity]); // Added dependencies for generateMockActivity
 
   useEffect(() => {
     loadDashboardData();
