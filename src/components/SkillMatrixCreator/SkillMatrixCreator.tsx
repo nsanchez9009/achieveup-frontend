@@ -92,15 +92,40 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       return;
     }
 
+    // Detailed request logging for debugging
+    console.log('Starting skill suggestions request with:', {
+      courseId: selectedCourse,
+      courseName: selectedCourseData.name,
+      courseCode: selectedCourseData.code,
+      courseDescription: selectedCourseData.description || 'No description available'
+    });
+
     setSuggestionsLoading(true);
     try {
-      // Call backend for AI skill suggestions
-      const response = await skillMatrixAPI.getSkillSuggestions({
+      // Prepare and validate request data
+      const requestData = {
         courseId: selectedCourse,
         courseName: selectedCourseData.name,
         courseCode: selectedCourseData.code,
         courseDescription: selectedCourseData.description
-      });
+      };
+
+      // Log the exact request being sent
+      console.log('Sending skill suggestions request:', requestData);
+
+      // Validate request data structure
+      if (!requestData.courseId) {
+        throw new Error('Missing courseId in request');
+      }
+      if (!requestData.courseName) {
+        throw new Error('Missing courseName in request');
+      }
+      if (!requestData.courseCode) {
+        throw new Error('Missing courseCode in request');
+      }
+
+      // Call backend for AI skill suggestions
+      const response = await skillMatrixAPI.getSkillSuggestions(requestData);
       
       console.log('AI skill suggestions response:', response.data);
       
@@ -151,14 +176,33 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       } else {
         toast.error('⚠️ AI analysis completed but returned no skill suggestions. This appears to be a backend issue.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting skill suggestions:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Failed to get skill suggestions: ${errorMessage}. You can add skills manually.`);
+      
+      // Detailed error handling based on status code
+      if (error.response?.status === 400) {
+        const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Bad request format';
+        toast.error(`Skill suggestions failed (400): ${errorMsg}. Check console for request details.`);
+        console.error('400 Error details:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          config: {
+            url: error.response.config?.url,
+            method: error.response.config?.method,
+            data: error.response.config?.data
+          }
+        });
+      } else if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please check your instructor token in Settings.');
+      } else if (error.response?.status === 403) {
+        toast.error('Access denied. Instructor permissions required.');
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error(`Failed to get skill suggestions: ${errorMessage}. You can add skills manually.`);
+      }
       
       // If backend fails, allow manual skill entry
-      setSkillSuggestions([]);
-      setFinalSkills([]);
       setStep('review-skills');
     } finally {
       setSuggestionsLoading(false);

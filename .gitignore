@@ -63,3 +63,6 @@ BACKEND_QUIZ_API_ISSUE.txt
 
 # Backend AI suggestions issue report (internal communication) 
 BACKEND_AI_SUGGESTIONS_ISSUE.txt 
+
+# Backend AI analysis 400 error debug report (internal communication)
+BACKEND_AI_ANALYSIS_400_DEBUG.txt 
