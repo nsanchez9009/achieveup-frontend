@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { BookOpen, Brain, Save, Edit2, Trash2, Plus, CheckCircle, AlertCircle } from 'lucide-react';
+import { BookOpen, Brain, Save, Edit2, Trash2, Plus, CheckCircle, AlertCircle, Lightbulb } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { skillMatrixAPI, canvasInstructorAPI } from '../../services/api';
+import { skillMatrixAPI, canvasAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { SkillMatrix } from '../../types';
 import Button from '../common/Button';
 import Card from '../common/Card';
@@ -29,6 +30,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   courseId, 
   onMatrixCreated 
 }) => {
+  const { user } = useAuth();
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>(courseId || '');
   const [selectedCourseData, setSelectedCourseData] = useState<CanvasCourse | null>(null);
@@ -40,6 +42,8 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   const [editingSkill, setEditingSkill] = useState<number | null>(null);
   const [newSkill, setNewSkill] = useState('');
 
+  const isInstructor = user?.canvasTokenType === 'instructor';
+
   const {
     register,
     handleSubmit,
@@ -49,13 +53,18 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
 
   const loadCourses = useCallback(async () => {
     try {
-      const response = await canvasInstructorAPI.getInstructorCourses();
+      setLoading(true);
+      const response = isInstructor 
+        ? await canvasAPI.getInstructorCourses()
+        : await canvasAPI.getCourses();
       setCourses(response.data);
     } catch (error) {
       console.error('Error loading courses:', error);
-      toast.error('Failed to load courses');
+      toast.error('Failed to load courses. Please check your Canvas integration.');
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [isInstructor]);
 
   useEffect(() => {
     loadCourses();
@@ -78,6 +87,11 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       return;
     }
 
+    if (!isInstructor) {
+      toast.error('Instructor access required for AI skill suggestions');
+      return;
+    }
+
     setSuggestionsLoading(true);
     try {
       // Call backend for AI skill suggestions
@@ -88,8 +102,42 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
         courseDescription: selectedCourseData.description
       });
       
-      // Handle the new backend response format
-      const suggestions = Array.isArray(response.data) ? response.data : (response.data as any).suggestedSkills || [];
+      console.log('AI skill suggestions response:', response.data);
+      
+      // Handle different possible response formats
+      let suggestions: SkillSuggestion[] = [];
+      
+      if (Array.isArray(response.data)) {
+        // Direct array response
+        suggestions = response.data;
+      } else if (response.data && Array.isArray((response.data as any).suggestedSkills)) {
+        // Wrapped in suggestedSkills property
+        suggestions = (response.data as any).suggestedSkills;
+      } else if (response.data && (response.data as any).data && Array.isArray((response.data as any).data)) {
+        // Double-wrapped response
+        suggestions = (response.data as any).data;
+      }
+      
+      // Ensure suggestions have the right format
+      suggestions = suggestions.map((item: any) => {
+        if (typeof item === 'string') {
+          // If it's just a string, convert to SkillSuggestion format
+          return {
+            skill: item,
+            relevance: 0.8, // Default relevance
+            description: `Suggested skill for ${selectedCourseData.name}`
+          };
+        } else if (item && typeof item === 'object') {
+          // If it's an object, ensure it has all required properties
+          return {
+            skill: item.skill || item.name || 'Unknown Skill',
+            relevance: item.relevance || item.confidence || 0.8,
+            description: item.description || `Suggested skill for ${selectedCourseData.name}`
+          };
+        }
+        return item;
+      }).filter(item => item && item.skill); // Remove any invalid items
+      
       setSkillSuggestions(suggestions);
       
       // Auto-select all suggestions as starting point
@@ -97,10 +145,16 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       setFinalSkills(suggestedSkills);
       
       setStep('review-skills');
-      toast.success(`Got ${suggestions.length} skill suggestions for ${selectedCourseData.name}`);
+      
+      if (suggestions.length > 0) {
+        toast.success(`Got ${suggestions.length} skill suggestions for ${selectedCourseData.name}`);
+      } else {
+        toast.error('⚠️ AI analysis completed but returned no skill suggestions. This appears to be a backend issue.');
+      }
     } catch (error) {
       console.error('Error getting skill suggestions:', error);
-      toast.error('Failed to get skill suggestions. You can add skills manually.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to get skill suggestions: ${errorMessage}. You can add skills manually.`);
       
       // If backend fails, allow manual skill entry
       setSkillSuggestions([]);
@@ -136,6 +190,9 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
     if (newSkill.trim() && !finalSkills.includes(newSkill.trim())) {
       setFinalSkills(prev => [...prev, newSkill.trim()]);
       setNewSkill('');
+      toast.success(`Added "${newSkill.trim()}" to skills list`);
+    } else if (finalSkills.includes(newSkill.trim())) {
+      toast.error('This skill is already in the list');
     }
   };
 
@@ -159,6 +216,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
         description: data.description
       };
 
+      console.log('Creating skill matrix with data:', matrixData);
       const response = await skillMatrixAPI.create(matrixData);
       
       onMatrixCreated?.(response.data);
@@ -174,11 +232,23 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       setValue('description', '');
     } catch (error) {
       console.error('Error creating skill matrix:', error);
-      toast.error('Failed to create skill matrix');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to create skill matrix: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
+
+  // Loading state for initial course load
+  if (loading && courses.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ucf-gold"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -195,31 +265,40 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                 Step 1: Select Course
               </h3>
               
-              <div className="grid grid-cols-1 gap-4">
-                {courses.map(course => (
-                  <div
-                    key={course.id}
-                    onClick={() => handleCourseSelect(course.id)}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all duration-200"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium text-gray-900">{course.name}</h4>
-                        <p className="text-sm text-gray-600">{course.code}</p>
-                        {course.description && (
-                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{course.description}</p>
-                        )}
+              {courses.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {courses.map(course => (
+                    <div
+                      key={course.id}
+                      onClick={() => handleCourseSelect(course.id)}
+                      className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all duration-200 group"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{course.name}</h4>
+                          <p className="text-sm text-gray-600">{course.code}</p>
+                          {course.description && (
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{course.description}</p>
+                          )}
+                        </div>
+                        <CheckCircle className="w-5 h-5 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
-                      <CheckCircle className="w-5 h-5 text-green-500 opacity-0 group-hover:opacity-100" />
                     </div>
-                  </div>
-                ))}
-              </div>
-
-              {courses.length === 0 && (
+                  ))}
+                </div>
+              ) : (
                 <div className="text-center py-8">
                   <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No courses found. Please check your Canvas integration.</p>
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No Courses Found</h4>
+                  <p className="text-gray-600 mb-4">
+                    Make sure your Canvas instructor token is set up correctly.
+                  </p>
+                  <a
+                    href="/settings"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-ucf-gold hover:bg-yellow-600"
+                  >
+                    Configure Canvas Token
+                  </a>
                 </div>
               )}
             </div>
@@ -237,6 +316,9 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                 <h4 className="font-medium text-blue-900 mb-2">Selected Course</h4>
                 <p className="text-blue-800">{selectedCourseData.name}</p>
                 <p className="text-sm text-blue-600">{selectedCourseData.code}</p>
+                {selectedCourseData.description && (
+                  <p className="text-xs text-blue-600 mt-2">{selectedCourseData.description}</p>
+                )}
               </div>
 
               <div className="text-center">
@@ -245,16 +327,27 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                   that students should develop in this course.
                 </p>
                 
-                <Button
-                  type="button"
-                  onClick={getSkillSuggestions}
-                  loading={suggestionsLoading}
-                  disabled={suggestionsLoading}
-                  className="flex items-center"
-                >
-                  <Brain className="w-4 h-4 mr-2" />
-                  {suggestionsLoading ? 'Getting Skill Suggestions...' : 'Get Skill Suggestions'}
-                </Button>
+                {isInstructor ? (
+                  <Button
+                    type="button"
+                    onClick={getSkillSuggestions}
+                    loading={suggestionsLoading}
+                    disabled={suggestionsLoading}
+                    className="flex items-center"
+                  >
+                    <Brain className="w-4 h-4 mr-2" />
+                    {suggestionsLoading ? 'Getting Skill Suggestions...' : 'Get AI Skill Suggestions'}
+                  </Button>
+                ) : (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center">
+                      <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
+                      <p className="text-sm text-yellow-800">
+                        <strong>Instructor access required</strong> for AI skill suggestions.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="mt-4">
                   <Button
@@ -289,7 +382,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                 <input
                   {...register('matrixName', { required: 'Matrix name is required' })}
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
                   placeholder="e.g., Web Development - Skills Matrix"
                 />
                 {errors.matrixName && (
@@ -297,10 +390,24 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                 )}
               </div>
 
+              {/* Matrix Description */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description (Optional)
+                </label>
+                <textarea
+                  {...register('description')}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
+                  placeholder="Describe what skills this matrix covers..."
+                />
+              </div>
+
               {/* AI Suggested Skills */}
               {skillSuggestions.length > 0 && (
                 <div className="mb-6">
-                  <h4 className="font-medium text-gray-900 mb-3">
+                  <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                    <Lightbulb className="w-4 h-4 mr-2 text-yellow-500" />
                     AI Suggested Skills ({skillSuggestions.length} skills)
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -311,7 +418,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                         className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
                           finalSkills.includes(suggestion.skill)
                             ? 'border-green-300 bg-green-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -336,6 +443,24 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* No AI Suggestions Message */}
+              {step === 'review-skills' && skillSuggestions.length === 0 && isInstructor && (
+                <div className="mb-6">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <AlertCircle className="w-5 h-5 text-yellow-600 mr-3" />
+                      <div>
+                        <h4 className="text-sm font-medium text-yellow-800">No AI Suggestions Available</h4>
+                        <p className="text-sm text-yellow-700 mt-1">
+                          The AI service didn't return any skill suggestions. This appears to be a backend issue. 
+                          You can add skills manually using the input below.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -379,6 +504,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                           type="button"
                           onClick={() => setEditingSkill(index)}
                           className="text-blue-600 hover:text-blue-800"
+                          title="Edit skill"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -386,6 +512,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                           type="button"
                           onClick={() => removeSkill(index)}
                           className="text-red-600 hover:text-red-800"
+                          title="Remove skill"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -401,7 +528,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                     value={newSkill}
                     onChange={(e) => setNewSkill(e.target.value)}
                     placeholder="Add custom skill..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
