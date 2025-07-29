@@ -98,11 +98,16 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   const loadExistingMatrices = async (courseId: string) => {
     try {
       setLoadingExistingMatrices(true);
+      console.log(`Loading existing skill matrices for course: ${courseId}`);
+      
       const response = await skillMatrixAPI.getAllByCourse(courseId);
+      console.log(`Existing matrices API response for course ${courseId}:`, response.data);
+      
       setExistingMatrices(response.data);
       
       // Show existing matrices section if any exist
       if (response.data.length > 0) {
+        console.log(`Found ${response.data.length} existing matrices`);
         setShowExistingMatrices(true);
         
         // Auto-adjust matrix name if it conflicts with existing ones
@@ -121,15 +126,38 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
             counter++;
           } while (existingNames.includes(newMatrixName) && counter < 50);
           
+          console.log(`Auto-generated unique matrix name: ${newMatrixName}`);
           setValue('matrixName', newMatrixName);
         }
+      } else {
+        console.log(`No existing matrices found for course ${courseId}`);
+        setShowExistingMatrices(false);
       }
     } catch (error: any) {
       console.error('Error loading existing matrices:', error);
-      // If 404, no matrices exist yet - that's fine
-      if (error.response?.status !== 404) {
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.response?.config?.url,
+        courseId: courseId
+      });
+      
+      // Provide more specific error messages based on status
+      if (error.response?.status === 404) {
+        console.log(`404 - No existing matrices found for course ${courseId} (this is normal for new courses)`);
+        // Don't show error toast for 404 - this is expected for courses without matrices
+      } else if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please check your instructor token in Settings.');
+      } else if (error.response?.status === 403) {
+        toast.error('Access denied. You may not have permission to view matrices for this course.');
+      } else if (error.response?.status >= 500) {
+        toast.error('Server error while loading existing matrices. Please try again later.');
+      } else {
         console.warn('Failed to load existing matrices:', error.message);
+        toast.error(`Failed to load existing matrices: ${error.message}`);
       }
+      
       setExistingMatrices([]);
       setShowExistingMatrices(false);
     } finally {
@@ -162,14 +190,28 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
     setSuggestionsLoading(true);
     try {
       // Handle potential missing or differently named courseCode field
-      const courseCode = selectedCourseData.code || (selectedCourseData as any).course_code || (selectedCourseData as any).courseCode || 'UNKNOWN';
+      // Canvas API might return different field names depending on the endpoint
+      let courseCode = selectedCourseData.code || 
+                      (selectedCourseData as any).course_code || 
+                      (selectedCourseData as any).courseCode || 
+                      (selectedCourseData as any).sis_course_id ||
+                      'UNKNOWN';
+      
+      // If still no course code, try to extract from course name or use a default
+      if (courseCode === 'UNKNOWN' || !courseCode) {
+        console.warn('No course code found, attempting to generate one from course name');
+        // Try to create a reasonable course code from the course name
+        const courseName = selectedCourseData.name || '';
+        courseCode = courseName.replace(/\s+/g, '').substring(0, 8).toUpperCase() || 'COURSE';
+        console.log('Generated course code:', courseCode);
+      }
       
       // Prepare and validate request data
       const requestData = {
         courseId: selectedCourse,
         courseName: selectedCourseData.name,
         courseCode: courseCode,
-        courseDescription: selectedCourseData.description
+        courseDescription: selectedCourseData.description || `Course: ${selectedCourseData.name}`
       };
 
       // Log the exact request being sent
@@ -182,15 +224,14 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       if (!requestData.courseName) {
         throw new Error('Missing courseName in request');
       }
-      if (!requestData.courseCode || requestData.courseCode === 'UNKNOWN') {
-        console.warn('Course code missing or not found in course data:', {
+      if (!requestData.courseCode) {
+        console.warn('Course code still missing after attempts to generate it:', {
           originalCourse: selectedCourseData,
           availableFields: Object.keys(selectedCourseData),
-          codeField: selectedCourseData.code,
-          course_codeField: (selectedCourseData as any).course_code,
-          courseCodeField: (selectedCourseData as any).courseCode
+          generatedCode: courseCode
         });
-        throw new Error(`Missing courseCode in request. Available course fields: ${Object.keys(selectedCourseData).join(', ')}`);
+        // Don't throw error, let backend handle it or proceed with generated code
+        requestData.courseCode = 'GENERATED_CODE';
       }
 
       // Call backend for AI skill suggestions

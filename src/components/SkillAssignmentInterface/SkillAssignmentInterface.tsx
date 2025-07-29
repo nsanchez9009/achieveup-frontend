@@ -274,23 +274,48 @@ const SkillAssignmentInterface: React.FC = () => {
   const loadSkillMatrices = async (courseId: string) => {
     try {
       setLoadingMatrices(true);
+      console.log(`Loading skill matrices for course: ${courseId}`);
+      
       const response = await skillMatrixAPI.getAllByCourse(courseId);
+      console.log(`Skill matrices API response for course ${courseId}:`, response.data);
+      
       setAvailableMatrices(response.data);
       
       // Auto-select first matrix if available
       if (response.data.length > 0) {
+        console.log(`Found ${response.data.length} matrices, auto-selecting first one:`, response.data[0]);
         setSelectedMatrix(response.data[0]._id);
         setSelectedMatrixData(response.data[0]);
       } else {
+        console.log(`No matrices found for course ${courseId}`);
         setSelectedMatrix('');
         setSelectedMatrixData(null);
       }
     } catch (error: any) {
       console.error('Error loading skill matrices:', error);
-      // If 404, no matrices exist yet - that's fine
-      if (error.response?.status !== 404) {
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.response?.config?.url,
+        courseId: courseId
+      });
+      
+      // Provide more specific error messages based on status
+      if (error.response?.status === 404) {
+        console.log(`404 - No matrices endpoint found or no matrices exist for course ${courseId}`);
+        toast.error(`No skill matrices found for this course. The course may not have any matrices created yet, or the backend endpoint might be missing.`);
+      } else if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please check your instructor token in Settings.');
+      } else if (error.response?.status === 403) {
+        toast.error('Access denied. You may not have permission to view matrices for this course.');
+      } else if (error.response?.status >= 500) {
+        toast.error('Server error while loading matrices. Please try again later.');
+      } else {
         console.warn('Failed to load skill matrices:', error.message);
+        toast.error(`Failed to load skill matrices: ${error.message}`);
       }
+      
       setAvailableMatrices([]);
       setSelectedMatrix('');
       setSelectedMatrixData(null);
