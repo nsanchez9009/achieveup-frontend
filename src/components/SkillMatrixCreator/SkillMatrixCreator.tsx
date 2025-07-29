@@ -81,7 +81,14 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
     setSelectedCourseData(course || null);
     
     if (course) {
-      setValue('matrixName', `${course.name} - Skills Matrix`);
+      // Generate initial matrix name that doesn't conflict with existing ones
+      const baseName = course.name;
+      let initialMatrixName: string;
+      
+      // We'll check against existing matrices once they're loaded
+      // For now, start with the base name
+      initialMatrixName = `${baseName} - Skills Matrix`;
+      setValue('matrixName', initialMatrixName);
       setStep('get-suggestions');
       // Load existing matrices for this course
       loadExistingMatrices(courseId);
@@ -97,6 +104,25 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       // Show existing matrices section if any exist
       if (response.data.length > 0) {
         setShowExistingMatrices(true);
+        
+        // Auto-adjust matrix name if it conflicts with existing ones
+        if (selectedCourseData) {
+          const baseName = selectedCourseData.name;
+          const existingNames = response.data.map(m => m.matrix_name);
+          let newMatrixName: string;
+          let counter = 1;
+          
+          do {
+            if (counter === 1) {
+              newMatrixName = `${baseName} - Skills Matrix`;
+            } else {
+              newMatrixName = `${baseName} - Skills Matrix (${counter})`;
+            }
+            counter++;
+          } while (existingNames.includes(newMatrixName) && counter < 50);
+          
+          setValue('matrixName', newMatrixName);
+        }
       }
     } catch (error: any) {
       console.error('Error loading existing matrices:', error);
@@ -332,7 +358,22 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       setFinalSkills([]);
       setSkillSuggestions([]);
       if (selectedCourseData) {
-        setValue('matrixName', `${selectedCourseData.name} - Skills Matrix ${existingMatrices.length + 2}`);
+        // Generate a better auto-incremented name
+        const baseName = selectedCourseData.name;
+        const existingNames = existingMatrices.map(m => m.matrix_name);
+        let newMatrixName: string;
+        let counter = 1;
+        
+        do {
+          if (counter === 1) {
+            newMatrixName = `${baseName} - Skills Matrix`;
+          } else {
+            newMatrixName = `${baseName} - Skills Matrix (${counter})`;
+          }
+          counter++;
+        } while (existingNames.includes(newMatrixName) && counter < 50);
+        
+        setValue('matrixName', newMatrixName);
       }
       setValue('description', '');
     } catch (error: any) {
@@ -340,9 +381,33 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
       
       // Detailed error handling based on status code
       if (error.response?.status === 409) {
-        // Suggest a unique name
-        const suggestedName = `${data.matrixName} (${new Date().toLocaleDateString()})`;
+        // Generate a better unique name suggestion
+        const baseName = data.matrixName.replace(/\s*\(\d+\/\d+\/\d+\).*$/, ''); // Remove any existing date suffix
         const existingNames = existingMatrices.map(m => m.matrix_name);
+        
+        let suggestedName: string;
+        let counter = 1;
+        
+        // Try different naming strategies
+        do {
+          if (counter === 1) {
+            // First try: add current date
+            suggestedName = `${baseName} (${new Date().toLocaleDateString()})`;
+          } else if (counter === 2) {
+            // Second try: add timestamp
+            suggestedName = `${baseName} (${new Date().toLocaleString()})`;
+          } else {
+            // Subsequent tries: add incremental number
+            suggestedName = `${baseName} (Version ${counter - 1})`;
+          }
+          counter++;
+        } while (existingNames.includes(suggestedName) && counter < 20);
+        
+        // Fallback: add random suffix if all else fails
+        if (existingNames.includes(suggestedName)) {
+          const randomSuffix = Math.random().toString(36).substring(2, 8);
+          suggestedName = `${baseName} (${randomSuffix})`;
+        }
         
         toast.error(
           <div>
