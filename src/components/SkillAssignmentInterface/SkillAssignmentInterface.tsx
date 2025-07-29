@@ -416,11 +416,7 @@ const SkillAssignmentInterface: React.FC = () => {
     }));
   };
 
-  const getReviewStatus = () => {
-    const totalQuestions = questions.length;
-    const reviewedQuestions = Object.values(humanReviewStatus).filter(reviewed => reviewed).length;
-    return { totalQuestions, reviewedQuestions, pendingReview: totalQuestions - reviewedQuestions };
-  };
+
 
   const stats = getAssignmentStats();
   const filteredQuestions = getFilteredQuestions();
