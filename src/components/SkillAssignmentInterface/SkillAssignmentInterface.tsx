@@ -362,7 +362,7 @@ const SkillAssignmentInterface: React.FC = () => {
   const removeSkillFromQuestion = (questionId: string, skillIndex: number): void => {
     setQuestionSkills(prev => ({
       ...prev,
-      [questionId]: prev[question.id].filter((_, index) => index !== skillIndex)
+      [questionId]: prev[questionId].filter((_, index) => index !== skillIndex)
     }));
   };
 
@@ -620,8 +620,61 @@ const SkillAssignmentInterface: React.FC = () => {
               </div>
             )}
 
-            {/* Questions Section */}
-            {selectedCourse && selectedQuiz && questions.length > 0 && (
+            {/* Selected Matrix Info */}
+            {selectedMatrixData && (
+              <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="text-lg font-medium text-green-900 mb-2">
+                      Using Skill Matrix: {selectedMatrixData.matrix_name}
+                    </h4>
+                    <p className="text-sm text-green-700 mb-3">
+                      {selectedMatrixData.skills.length} skills available for assignment
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedMatrixData.skills.slice(0, 8).map((skill: string, index: number) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                      {selectedMatrixData.skills.length > 8 && (
+                        <span className="text-xs text-green-600">
+                          +{selectedMatrixData.skills.length - 8} more skills
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <span className="text-xs text-green-600">
+                      Created: {new Date(selectedMatrixData.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* No Matrix Selected Warning */}
+            {selectedCourse && availableMatrices.length > 0 && !selectedMatrix && (
+              <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-yellow-600 text-lg">⚠️</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-yellow-900">No Skill Matrix Selected</h4>
+                    <p className="text-sm text-yellow-700">
+                      Please select a skill matrix to see available skills for assignment.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Stats and Actions - Only show if quiz is selected */}
+            {selectedQuiz && questions.length > 0 && (
               <>
                 {/* Stats and Controls */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -736,10 +789,37 @@ const SkillAssignmentInterface: React.FC = () => {
 
                 {/* Bulk Operations */}
                 <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Bulk Operations</h4>
+                  
+                  {/* Matrix Skills Quick Assignment */}
+                  {selectedMatrixData && (
+                    <div className="mb-4">
+                      <h5 className="text-xs font-medium text-gray-700 mb-2">Quick Assign from Matrix:</h5>
+                      <div className="flex flex-wrap gap-2">
+                        {getMatrixSkills().slice(0, 6).map((skill: string, index: number) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => bulkAssignSkill(skill)}
+                            className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full hover:bg-blue-200 transition-colors"
+                          >
+                            {skill}
+                          </button>
+                        ))}
+                        {getMatrixSkills().length > 6 && (
+                          <span className="text-xs text-gray-500 px-2 py-1">
+                            +{getMatrixSkills().length - 6} more in matrix
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Custom Skill Assignment */}
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1">
                       <Input
-                        placeholder="Enter skill name for bulk assignment..."
+                        placeholder="Enter custom skill name for bulk assignment..."
                         value={bulkSkill}
                         onChange={(e) => setBulkSkill(e.target.value)}
                       />
