@@ -254,13 +254,13 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   };
 
   const onSubmit = async (data: { matrixName: string; description?: string }) => {
-    if (!selectedCourse) {
-      toast.error('Please select a course');
+    if (finalSkills.length === 0) {
+      toast.error('Please add at least one skill to the matrix');
       return;
     }
 
-    if (finalSkills.length === 0) {
-      toast.error('Please add at least one skill');
+    if (!selectedCourse) {
+      toast.error('Please select a course first');
       return;
     }
 
@@ -273,24 +273,69 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
         description: data.description
       };
 
+      // Log the exact request being sent
       console.log('Creating skill matrix with data:', matrixData);
+
+      // Validate request data structure
+      if (!matrixData.course_id) {
+        throw new Error('Missing course_id in request');
+      }
+      if (!matrixData.matrix_name || matrixData.matrix_name.trim() === '') {
+        throw new Error('Missing or empty matrix_name in request');
+      }
+      if (!matrixData.skills || matrixData.skills.length === 0) {
+        throw new Error('Missing or empty skills array in request');
+      }
+
       const response = await skillMatrixAPI.create(matrixData);
+      
+      console.log('Skill matrix creation response:', response.data);
       
       onMatrixCreated?.(response.data);
       toast.success('Skill matrix created successfully!');
-      
-      // Reset form
-      setStep('select-course');
-      setSelectedCourse('');
-      setSelectedCourseData(null);
-      setSkillSuggestions([]);
-      setFinalSkills([]);
-      setValue('matrixName', '');
-      setValue('description', '');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating skill matrix:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Failed to create skill matrix: ${errorMessage}`);
+      
+      // Detailed error handling based on status code
+      if (error.response?.status === 409) {
+        const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Conflict - item already exists';
+        toast.error(`Skill matrix creation failed (409): ${errorMsg}. This usually means a matrix with this name already exists for this course.`);
+        console.error('409 Conflict details:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          config: {
+            url: error.response.config?.url,
+            method: error.response.config?.method,
+            data: error.response.config?.data
+          },
+          possibleCauses: [
+            'A skill matrix with this name already exists for this course',
+            'Duplicate course_id + matrix_name combination',
+            'Backend validation rules preventing duplicate entries'
+          ]
+        });
+      } else if (error.response?.status === 400) {
+        const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Bad request format';
+        toast.error(`Skill matrix creation failed (400): ${errorMsg}. Check console for request details.`);
+        console.error('400 Error details:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          config: {
+            url: error.response.config?.url,
+            method: error.response.config?.method,
+            data: error.response.config?.data
+          }
+        });
+      } else if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please check your instructor token in Settings.');
+      } else if (error.response?.status === 403) {
+        toast.error('Access denied. Instructor permissions required.');
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error(`Failed to create skill matrix: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
