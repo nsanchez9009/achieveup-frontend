@@ -1,200 +1,321 @@
-# AchieveUp Instructor Portal
+# AchieveUp - AI-Powered Skill Tracking System
 
-A modern React TypeScript frontend for the AchieveUp skill tracking system, designed specifically for instructors to manage courses, track student progress, and assign skills to assessment questions.
+## 🎯 Vision & Overview
 
-## 🎯 Features
+AchieveUp transforms traditional assessment into comprehensive skill tracking. Instead of just seeing grades, instructors get detailed insights into what specific skills each student has mastered and where they need support.
 
-### **Core Functionality**
-- **Course Selection**: Integrated with Canvas LMS for seamless course management
-- **AI-Powered Skill Matrix Creation**: Get intelligent skill suggestions based on course content
-- **Zero-Shot Classification**: Automatically assign skills to quiz questions using AI
-- **Student Progress Tracking**: Monitor individual student skill development
-- **Analytics Dashboard**: Comprehensive instructor analytics and visualizations
+### Core Philosophy
+- **Skills Over Scores**: Move beyond simple grades to track specific skill development
+- **AI-Enhanced Teaching**: Use artificial intelligence to identify and map skills to assessments
+- **Real-Time Insights**: Provide instructors with immediate feedback on student progress
+- **Personalized Learning**: Enable targeted interventions based on skill gaps
+- **Evidence-Based Education**: Create verifiable skill credentials for students
 
-### **AI-Driven Workflow**
-1. **Select Course** → Choose from Canvas instructor courses
-2. **AI Skill Suggestions** → Get relevant skills suggested by AI based on course content
-3. **Skill Customization** → Edit, add, or remove skills as needed
-4. **Question Analysis** → AI analyzes quiz questions for complexity and skill mapping
-5. **Zero-Shot Classification** → Automatically assign skills to questions
-6. **Progress Tracking** → Track student mastery of assigned skills
+## 🏗️ Current Architecture
 
-## 🛠️ Technology Stack
+### Frontend (React + TypeScript)
+- **Status**: ✅ Production Ready
+- **URL**: https://achieveup-frontend.netlify.app
+- **Tech Stack**: React 18, TypeScript, Tailwind CSS, React Hook Form, Axios
+- **Deployment**: Netlify (automatic from GitHub)
 
-- **Frontend**: React 18 with TypeScript
-- **Styling**: Tailwind CSS with UCF branding
-- **State Management**: React Context API
-- **Forms**: React Hook Form
-- **HTTP Client**: Axios
-- **Icons**: Lucide React
-- **Notifications**: React Hot Toast
-- **Deployment**: Netlify
+### Backend (Node.js + Express)
+- **Status**: ✅ Production Ready
+- **URL**: https://gen-ai-prime-3ddeabb35bd7.herokuapp.com
+- **Tech Stack**: Node.js, Express, MongoDB, JWT, Canvas API integration
+- **Deployment**: Heroku
 
-## 🏗️ Project Structure
+## 🚀 Current Features
 
+### ✅ Implemented & Working
+
+#### Authentication System
+- Instructor-only authentication with Canvas token validation
+- Optional Canvas token during signup (can be added later)
+- Flexible role validation for users without Canvas tokens
+- Secure JWT-based authentication
+
+#### Instructor Dashboard
+- Course overview with Canvas integration
+- Student count with deterministic calculations
+- Skill matrix management
+- Recent activity tracking
+- Workflow progress indicators
+
+#### Skill Matrix Creation
+- AI-powered skill suggestions based on course content
+- Manual skill customization and editing
+- Course-specific skill matrices
+- Template-based skill generation
+
+#### Skill Assignment Interface
+- Canvas quiz and question integration
+- AI-powered question analysis and skill mapping
+- Bulk assignment operations
+- Manual skill assignment with drag-and-drop
+- Question complexity analysis
+
+#### Student Progress Tracking
+- Individual student skill breakdown
+- Top 3 skills per student display
+- Risk level assessment (low/medium/high)
+- Detailed skill analytics with modal views
+- Progress visualization and reporting
+
+#### Settings & Configuration
+- Canvas API token management
+- Profile management
+- Connection testing and validation
+- Clear guidance for Canvas integration
+
+## 🎯 Student View (Planned)
+
+### Student Dashboard Features Needed
+- **Individual Progress View**: Students see their own skill mastery levels
+- **Skill Breakdown**: Detailed view of all skills with progress percentages
+- **Achievement Badges**: Visual badges for skill milestones
+- **Learning Path**: Recommended next steps for skill improvement
+- **Assessment History**: Timeline of completed assessments and results
+
+### Student Authentication
+- **Canvas Student Integration**: Use Canvas student tokens
+- **Student Role Validation**: Separate authentication for students
+- **Course Enrollment**: Access only enrolled courses
+- **Privacy Controls**: Students see only their own data
+
+### Student Interface Components Needed
+```typescript
+// Student Dashboard Component
+interface StudentDashboard {
+  enrolledCourses: Course[];
+  skillProgress: SkillProgress[];
+  achievements: Badge[];
+  learningRecommendations: string[];
+}
+
+// Student Progress View
+interface StudentProgressView {
+  courseId: string;
+  skillBreakdown: SkillBreakdown[];
+  assessmentHistory: Assessment[];
+  improvementSuggestions: string[];
+}
 ```
-src/
-├── components/
-│   ├── AnalyticsDashboard/     # Instructor analytics
-│   ├── Layout/                 # Navigation and layout
-│   ├── SkillAssignmentInterface/ # AI skill assignment
-│   ├── SkillMatrixCreator/     # AI-powered skill matrix creation
-│   └── common/                 # Reusable UI components
-├── contexts/
-│   └── AuthContext.tsx         # Authentication (instructor-only)
-├── pages/
-│   ├── Dashboard.tsx           # Instructor dashboard
-│   ├── Login.tsx               # Instructor login
-│   ├── Settings.tsx            # Canvas token management
-│   └── Signup.tsx              # Instructor registration
-├── services/
-│   └── api.ts                  # Backend API integration
-└── types/
-    └── index.ts                # TypeScript definitions
+
+## 🔧 Backend Requirements for Student View
+
+### New Endpoints Needed
+```typescript
+// Student Authentication
+POST /auth/student/login
+POST /auth/student/signup
+GET /auth/student/me
+
+// Student Data
+GET /achieveup/student/{studentId}/courses
+GET /achieveup/student/{studentId}/progress/{courseId}
+GET /achieveup/student/{studentId}/achievements
+GET /achieveup/student/{studentId}/recommendations
+
+// Canvas Student Integration
+GET /canvas/student/courses
+GET /canvas/student/assessments/{courseId}
 ```
 
-## 🚀 Getting Started
+### Database Schema Updates
+```sql
+-- Student users table
+CREATE TABLE student_users (
+  id UUID PRIMARY KEY,
+  canvas_student_id VARCHAR NOT NULL,
+  email VARCHAR UNIQUE NOT NULL,
+  name VARCHAR NOT NULL,
+  canvas_token VARCHAR ENCRYPTED,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Student progress tracking
+CREATE TABLE student_progress (
+  id UUID PRIMARY KEY,
+  student_id UUID REFERENCES student_users(id),
+  course_id VARCHAR NOT NULL,
+  skill_name VARCHAR NOT NULL,
+  mastery_level ENUM('beginner', 'intermediate', 'advanced'),
+  score DECIMAL(5,2),
+  questions_attempted INTEGER,
+  questions_correct INTEGER,
+  last_updated TIMESTAMP DEFAULT NOW()
+);
+```
+
+## 🎨 UI/UX Requirements for Student View
+
+### Student Dashboard Design
+- **Clean, Student-Friendly Interface**: Less technical than instructor view
+- **Progress Visualization**: Charts and graphs showing skill development
+- **Achievement Showcase**: Prominent display of earned badges
+- **Mobile Responsive**: Optimized for student device usage
+- **Accessibility**: WCAG compliant for all students
+
+### Key Student Pages Needed
+1. **Student Dashboard**: Overview of all courses and progress
+2. **Course Progress**: Detailed view of skills for specific course
+3. **Achievements**: Badge collection and milestone tracking
+4. **Learning Path**: Recommended next steps and resources
+5. **Assessment History**: Timeline of completed work
+
+## 🔄 Workflow Integration
+
+### Current Instructor Workflow
+1. **Create Skill Matrix** → Define skills for course
+2. **Assign Skills to Questions** → Map quiz questions to skills
+3. **Students Complete Assessments** → Automatic progress tracking
+4. **Monitor Progress** → View student skill development
+
+### Planned Student Workflow
+1. **Student Login** → Canvas student authentication
+2. **View Progress** → See skill mastery levels
+3. **Complete Assessments** → Normal Canvas quiz taking
+4. **Track Growth** → Monitor skill development over time
+5. **Earn Badges** → Achieve skill milestones
+
+## 🧪 Testing Requirements
+
+### Frontend Testing
+- **Unit Tests**: All React components and hooks
+- **Integration Tests**: Authentication and API integration
+- **E2E Tests**: Complete user workflows
+- **Accessibility Tests**: WCAG compliance verification
+
+### Backend Testing
+- **API Tests**: All endpoints and error handling
+- **Canvas Integration Tests**: Token validation and data retrieval
+- **AI Service Tests**: Skill suggestion and analysis accuracy
+- **Performance Tests**: Load testing for multiple users
+
+## 🚀 Deployment & Infrastructure
+
+### Current Setup
+- **Frontend**: Netlify (automatic deployment)
+- **Backend**: Heroku (production ready)
+- **Database**: MongoDB Atlas
+- **CDN**: Netlify CDN for static assets
+
+### Production Checklist
+- [x] Frontend deployed and working
+- [x] Backend deployed and working
+- [x] Canvas integration functional
+- [x] Authentication system complete
+- [x] Basic instructor features working
+
+### Remaining Infrastructure
+- [ ] Student authentication system
+- [ ] Student database schema
+- [ ] Student API endpoints
+- [ ] Student frontend components
+- [ ] Mobile optimization
+- [ ] Performance monitoring
+- [ ] Error tracking and logging
+
+## 📊 Analytics & Reporting
+
+### Current Analytics
+- **Instructor Analytics**: Course-wide student performance
+- **Individual Student Views**: Detailed skill breakdowns
+- **Progress Tracking**: Real-time skill development
+- **Risk Assessment**: Student performance indicators
+
+### Planned Analytics
+- **Student Self-Analytics**: Individual progress insights
+- **Learning Analytics**: Study pattern analysis
+- **Predictive Analytics**: Skill mastery predictions
+- **Comparative Analytics**: Class performance benchmarks
+
+## 🔐 Security & Privacy
+
+### Current Security
+- **JWT Authentication**: Secure token-based auth
+- **Canvas Token Encryption**: Encrypted storage of API tokens
+- **Role-Based Access**: Instructor-only current access
+- **HTTPS**: All communications encrypted
+
+### Security Requirements for Student View
+- **Student Data Privacy**: Students see only their own data
+- **FERPA Compliance**: Educational data protection
+- **Canvas Integration Security**: Secure student token handling
+- **Data Encryption**: All sensitive data encrypted at rest
+
+## 🎯 Next Steps & Roadmap
+
+### Phase 1: Student Authentication (Week 1-2)
+- [ ] Implement student authentication endpoints
+- [ ] Create student user database schema
+- [ ] Build student login/signup pages
+- [ ] Test Canvas student token integration
+
+### Phase 2: Student Dashboard (Week 3-4)
+- [ ] Create student dashboard component
+- [ ] Implement course enrollment display
+- [ ] Build progress visualization components
+- [ ] Add achievement/badge system
+
+### Phase 3: Student Progress Views (Week 5-6)
+- [ ] Individual course progress pages
+- [ ] Skill breakdown visualizations
+- [ ] Assessment history timeline
+- [ ] Learning recommendations
+
+### Phase 4: Mobile & Polish (Week 7-8)
+- [ ] Mobile-responsive design
+- [ ] Performance optimization
+- [ ] Accessibility improvements
+- [ ] Final testing and deployment
+
+## 🛠️ Development Setup
 
 ### Prerequisites
-- Node.js 16 or higher
-- Canvas LMS instructor account
-- Canvas API token
+- Node.js 16+
+- npm or yarn
+- Git
 
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd achieveup-frontend
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Environment Setup**
-   Create a `.env` file:
-   ```env
-   REACT_APP_API_URL=https://your-backend-url.herokuapp.com
-   REACT_APP_ENVIRONMENT=development
-   ```
-
-4. **Start development server**
-   ```bash
-   npm start
-   ```
-
-5. **Build for production**
-   ```bash
-   npm run build
-   ```
-
-## 🔐 Authentication
-
-This application is **instructor-only**. Users must:
-- Have a Canvas LMS instructor account
-- Provide a valid Canvas instructor API token
-- Be authenticated as an instructor role
-
-## 🎨 UI/UX Features
-
-- **UCF Branding**: Black, gold, grey, and white color scheme
-- **Responsive Design**: Works on all screen sizes
-- **Modern Interface**: Clean, professional instructor-focused design
-- **Real-time Feedback**: Loading states and toast notifications
-- **Accessibility**: WCAG compliant design
-
-## 📊 AI Integration
-
-All AI functionality is handled by the backend:
-
-- **Skill Suggestions**: `/achieveup/ai/suggest-skills`
-- **Question Analysis**: `/achieveup/ai/analyze-questions`
-- **Bulk Assignment**: `/achieveup/ai/bulk-assign`
-
-The frontend provides the interface while the backend handles:
-- NLP/ML processing
-- Zero-shot classification
-- Question complexity analysis
-- Skill mapping algorithms
-
-## 🚀 Deployment
-
-### Netlify Configuration
-The project includes automatic Netlify deployment:
-
-```toml
-[build]
-  command = "npm run build"
-  publish = "build"
-
-[build.environment]
-  REACT_APP_API_URL = "https://your-backend-url.herokuapp.com"
-  REACT_APP_ENVIRONMENT = "production"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+### Frontend Setup
+```bash
+git clone https://github.com/nsanchez9009/achieveup-frontend.git
+cd achieveup-frontend
+npm install
+npm start
 ```
 
 ### Environment Variables
-- `REACT_APP_API_URL`: Backend API URL
-- `REACT_APP_ENVIRONMENT`: Environment (development/production)
+```env
+REACT_APP_API_URL=https://gen-ai-prime-3ddeabb35bd7.herokuapp.com
+REACT_APP_ENVIRONMENT=development
+```
 
-## 🔗 Backend Integration
+### Backend Setup
+```bash
+git clone https://github.com/AndresQ9/knowgap-backend.git
+cd knowgap-backend
+npm install
+npm start
+```
 
-This frontend requires a compatible backend that provides:
+## 📞 Support & Contact
 
-1. **Authentication Endpoints**
-   - JWT-based instructor authentication
-   - Canvas token validation
+### Repository Links
+- **Frontend**: https://github.com/nsanchez9009/achieveup-frontend
+- **Backend**: https://github.com/AndresQ9/knowgap-backend
+- **Live Demo**: https://achieveup-frontend.netlify.app
 
-2. **Canvas Integration**
-   - Course data retrieval
-   - Quiz and question management
+### Development Team
+- **Frontend Developer**: Nico Sanchez
+- **Backend Developer**: Andres Q
+- **Project Lead**: UCF Senior Design Team
 
-3. **AI Services**
-   - Skill suggestion algorithms
-   - Question analysis and classification
-   - Bulk assignment operations
+## 📝 License
 
-4. **Data Management**
-   - Skill matrix storage
-   - Progress tracking
-   - Analytics data
-
-See `backend-requirements.txt` for detailed implementation requirements.
-
-## 📈 Performance
-
-- **Optimized Build**: Code splitting and bundle optimization
-- **Efficient Rendering**: React optimization patterns
-- **Caching**: Strategic API response caching
-- **Loading States**: Professional loading indicators
-
-## 🧪 Development
-
-### Code Quality
-- TypeScript for type safety
-- ESLint for code quality
-- Prettier for formatting
-- Consistent component patterns
-
-### Architecture
-- Component-based architecture
-- Context for state management
-- Custom hooks for logic reuse
-- Service layer for API calls
-
-## 📞 Support
-
-For questions about:
-- **Frontend Issues**: Check component documentation
-- **Backend Integration**: See backend requirements
-- **Canvas Setup**: Refer to Canvas API documentation
+This project is part of the UCF Senior Design program. All rights reserved.
 
 ---
 
-**AchieveUp Instructor Portal** - AI-Powered Skill Tracking for Educators 
+**AchieveUp** - Transforming Assessment into Skill Tracking 🎯 
