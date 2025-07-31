@@ -48,10 +48,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authAPI.me();
       const userData = response.data.user || response.data;
       
-      // Only allow instructors - but be more flexible with role checking
+      // More flexible role checking - allow users who signed up without Canvas tokens
       const isInstructor = userData.canvasTokenType === 'instructor' || 
                          userData.role === 'instructor' || 
-                         userData.role === 'admin';
+                         userData.role === 'admin' ||
+                         !userData.canvasTokenType; // Allow users without Canvas token
       
       if (!isInstructor) {
         console.warn('Non-instructor user detected, logging out');
@@ -101,10 +102,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const userData = userResponse.data.user || userResponse.data;
           console.log('User data after login:', userData);
           
-          // Only allow instructors - but be more flexible with role checking
+          // More flexible role checking - allow users who signed up without Canvas tokens
           const isInstructor = userData.canvasTokenType === 'instructor' || 
                              userData.role === 'instructor' || 
-                             userData.role === 'admin';
+                             userData.role === 'admin' ||
+                             !userData.canvasTokenType; // Allow users without Canvas token
           
           if (!isInstructor) {
             console.warn('Non-instructor user detected, logging out');
@@ -119,7 +121,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (meError: any) {
           console.error('Failed to get user data after login:', meError);
           // Even if me() fails, we still have a token, so consider login successful
-          setUser(response.data.user || { email, role: 'instructor', canvasTokenType: 'instructor' });
+          setUser(response.data.user || { 
+            email, 
+            role: 'instructor', 
+            canvasTokenType: 'instructor',
+            hasCanvasToken: false // Indicate no Canvas token for UI warnings
+          });
           setBackendAvailable(true);
           return true;
         }
@@ -173,7 +180,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (meError: any) {
           console.error('Failed to get user data after signup:', meError);
           // Even if me() fails, we still have a token, so consider signup successful
-          setUser(response.data.user || { ...data, role: 'instructor', canvasTokenType: 'instructor' });
+          setUser(response.data.user || { 
+            ...data, 
+            role: 'instructor', 
+            canvasTokenType: 'instructor',
+            hasCanvasToken: false // Indicate no Canvas token for UI warnings
+          });
           setBackendAvailable(true);
           return true;
         }
@@ -207,10 +219,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authAPI.me();
       const userData = response.data.user || response.data;
       
-      // Only allow instructors - but be more flexible with role checking
+      // More flexible role checking - allow users who signed up without Canvas tokens
       const isInstructor = userData.canvasTokenType === 'instructor' || 
                          userData.role === 'instructor' || 
-                         userData.role === 'admin';
+                         userData.role === 'admin' ||
+                         !userData.canvasTokenType; // Allow users without Canvas token
       
       if (!isInstructor) {
         console.warn('Non-instructor user detected, logging out');
