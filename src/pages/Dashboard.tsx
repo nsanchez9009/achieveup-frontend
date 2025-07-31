@@ -477,6 +477,28 @@ const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
+        
+        {/* Canvas Token Warning for Users Without Token */}
+        {!user?.hasCanvasToken && (
+          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-yellow-400" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Canvas Integration Required
+                </h3>
+                <div className="mt-2 text-sm text-yellow-700">
+                  <p>
+                    To access your courses and use AchieveUp features, you need to add your Canvas API token. 
+                    Go to <a href="/settings" className="font-medium underline hover:text-yellow-600">Settings</a> to configure it.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Enhanced Stats Cards */}

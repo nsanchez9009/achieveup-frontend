@@ -250,6 +250,37 @@ const Settings: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Account Settings</h1>
         <p className="text-gray-600">Manage your account information and preferences</p>
       </div>
+      
+      {/* Canvas Integration Importance Notice */}
+      {!user?.hasCanvasToken && (
+        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <Info className="h-6 w-6 text-blue-400" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-lg font-medium text-blue-900 mb-2">
+                Canvas Integration Required
+              </h3>
+              <p className="text-blue-800 mb-4">
+                To use AchieveUp features like course access, skill matrix creation, and student progress tracking, 
+                you need to add your Canvas API token. This allows AchieveUp to connect to your Canvas courses 
+                and provide AI-powered skill tracking.
+              </p>
+              <div className="bg-blue-100 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 mb-2">What you can do with Canvas integration:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Access your Canvas courses and quizzes</li>
+                  <li>• Create skill matrices for your courses</li>
+                  <li>• Assign skills to quiz questions with AI assistance</li>
+                  <li>• Track student progress and skill mastery</li>
+                  <li>• Generate skill-based analytics and insights</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left column: Profile (top) + Canvas Token (bottom) */}
         <div className="flex flex-col gap-8">

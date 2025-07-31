@@ -36,13 +36,18 @@ const Signup: React.FC = () => {
         name: data.name,
         email: data.email,
         password: data.password,
-        canvasApiToken: data.canvasApiToken,
+        canvasApiToken: data.canvasApiToken || '', // Allow empty token
         canvasTokenType: 'instructor' as const,
       };
 
       await signup(signupData);
       navigate('/');
-      toast.success('Instructor account created successfully!');
+      
+      if (!data.canvasApiToken) {
+        toast.success('Account created! Add your Canvas token in Settings to unlock all features.');
+      } else {
+        toast.success('Instructor account created successfully!');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Signup failed. Please try again.');
     }
@@ -50,7 +55,12 @@ const Signup: React.FC = () => {
 
   const getCanvasTokenInstructions = () => (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-      <h3 className="text-sm font-medium text-blue-900 mb-2">How to get your Canvas API Token:</h3>
+      <h3 className="text-sm font-medium text-blue-900 mb-2">Canvas API Token (Optional for Signup)</h3>
+      <p className="text-sm text-blue-800 mb-3">
+        You can create your account now and add your Canvas token later in Settings. 
+        However, you'll need it to access courses and use AchieveUp features.
+      </p>
+      <h4 className="text-sm font-medium text-blue-900 mb-2">How to get your Canvas API Token:</h4>
       <ol className="text-sm text-blue-800 space-y-1">
         <li>1. Log into your Canvas LMS account</li>
         <li>2. Go to Account → Settings → Approved Integrations</li>
@@ -58,7 +68,7 @@ const Signup: React.FC = () => {
         <li>4. Give it a name like "AchieveUp Integration"</li>
         <li>5. Set expiration to "Never" or choose a date</li>
         <li>6. Copy the generated token (it starts with numbers/letters)</li>
-        <li>7. Paste it in the field below</li>
+        <li>7. Paste it in the field below (or add later in Settings)</li>
       </ol>
       <p className="text-xs text-blue-600 mt-2">
         <strong>Note:</strong> You must be an instructor in Canvas to use this system.
@@ -209,26 +219,23 @@ const Signup: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Canvas API Token
+                Canvas API Token <span className="text-gray-500 font-normal">(Optional)</span>
               </label>
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  {...register('canvasApiToken', { 
-                    required: 'Canvas API token is required',
-                    minLength: {
-                      value: 64,
-                      message: 'Canvas API token must be at least 64 characters'
-                    }
-                  })}
+                  {...register('canvasApiToken')}
                   type="password"
                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Paste your Canvas API token"
+                  placeholder="Paste your Canvas API token (can add later in Settings)"
                 />
               </div>
               {errors.canvasApiToken && (
                 <p className="text-red-600 text-sm mt-1">{errors.canvasApiToken.message}</p>
               )}
+              <p className="text-xs text-gray-500 mt-1">
+                You can add this later in Settings to unlock course access and features.
+              </p>
             </div>
 
             <Button
